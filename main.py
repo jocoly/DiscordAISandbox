@@ -1,0 +1,127 @@
+import random
+import subprocess
+import threading
+import time
+import uuid
+from pathlib import Path
+from diffusers.utils import export_to_video
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import torch
+import os
+from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
+
+load_dotenv('./.env')
+app = Flask(__name__)
+CORS(app)
+print("--> Starting the backend server. This may take some time.")
+
+print("CUDA-enabled gpu detected: " + str(torch.cuda.is_available()))
+if torch.cuda.is_available():
+    device = torch.device('cuda:0')
+else:
+    device = torch.device('cpu')
+
+if (os.getenv("STABLE_DIFFUSION")) == 'true':
+    print("Loading Stable Diffusion 2 base model")
+    stable_diffusion_pipe = DiffusionPipeline.from_pretrained('stabilityai/stable-diffusion-2-base',
+                                                              torch_dtype=torch.float16,
+                                                              variant="fp16")
+    stable_diffusion_pipe.scheduler = DPMSolverMultistepScheduler.from_config(stable_diffusion_pipe.scheduler.config)
+    stable_diffusion_pipe = stable_diffusion_pipe.to(device)
+    stable_diffusion_pipe.enable_model_cpu_offload()
+    stable_diffusion_pipe.enable_vae_slicing()
+
+if (os.getenv("TEXT_TO_VIDEO")) == 'true':
+    print("Loading Modelscope Text-to-Video model")
+    text_to_video_pipe = DiffusionPipeline.from_pretrained('damo-vilab/text-to-video-ms-1.7b',
+                                                           torch_dtype=torch.float16,
+                                                           variant='fp16')
+    text_to_video_pipe.scheduler = DPMSolverMultistepScheduler.from_config(text_to_video_pipe.scheduler.config)
+    text_to_video_pipe = text_to_video_pipe.to(device)
+    text_to_video_pipe.enable_model_cpu_offload()
+    text_to_video_pipe.enable_vae_slicing()
+
+processing_lock = threading.Lock()
+
+
+def process(prompt: str, pipeline: str, num: int):
+    start_time = time.time()
+    print("Processing query...")
+    seed = random.randint(0, 100000)
+    if torch.cuda.is_available():
+        generator = torch.Generator(device=device).manual_seed(seed)
+    else:
+        generator = None
+    output_dir = os.getenv("OUTPUT_DIR")
+    process_output = []
+    match pipeline:
+        case "StableDiffusion":
+            images_array = stable_diffusion_pipe(
+                prompt=prompt,
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                guidance_scale=int(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                file_name = str(uuid.uuid4()) + '.png'
+                image = images_array[index]
+                image_path = os.path.join(output_dir, file_name)
+                image.save(image_path, format='png')
+                process_output.append(image_path)
+        case "TextToVideo":
+            video_frames = text_to_video_pipe(
+                prompt=prompt,
+                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                width=int(os.getenv("VIDEO_WIDTH")),
+                height=int(os.getenv("VIDEO_HEIGHT")),
+                generator=generator,
+            ).frames
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            file_name = str(uuid.uuid4()) + '.mp4'
+            mp4_file_path = os.path.join(output_dir, file_name)
+            export_to_video(video_frames, mp4_file_path)
+            gif_file_path = convert_to_gif(mp4_file_path)
+            os.remove(mp4_file_path)
+            process_output.append(gif_file_path)
+
+    gen_time = time.time() - start_time
+    print(f"Created generation in {gen_time} ms")
+    return process_output
+
+
+@app.route("/process", methods=["POST"])
+def process_api():
+    json_data = request.get_json(force=True)
+    text_prompt = json_data["text_prompt"]
+    pipeline = json_data["pipeline"]
+    num = int(json_data["num"])
+    with processing_lock:
+        generation = process(text_prompt, pipeline, num)
+    response = {'generation': generation}
+    return jsonify(response)
+
+
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify(success=True)
+
+
+def convert_to_gif(mp4_file_path):
+    gif_file_path = mp4_file_path[:-4] + ".gif"
+    subprocess.run(['ffmpeg', '-i', mp4_file_path, '-vf', 'fps=10,scale=320:-1:flags=lanczos', gif_file_path],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return gif_file_path
+
+
+if __name__ == "__main__":
+    app.run(host=os.getenv("BACKEND_ADDRESS"), port=os.getenv("PORT"), debug=False)
+

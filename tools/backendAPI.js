@@ -1,5 +1,3 @@
-import * as path from "path";
-import * as fs from "fs";
 import fetch from "node-fetch";
 
 const REQUEST_TIMEOUT_SEC = 120000

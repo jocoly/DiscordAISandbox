@@ -1,4 +1,6 @@
 import {getNumImages} from "../tools/getNumImages.js";
+import {queue} from "../bot.js";
+import {processQueue} from "../tools/processQueue.js";
 
 export async function draw(msg) {
     const numImages = await getNumImages(msg);

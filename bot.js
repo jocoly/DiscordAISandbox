@@ -1,3 +1,4 @@
+import {} from "dotenv/config";
 import {Client, Events, GatewayIntentBits} from 'discord.js';
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
@@ -40,5 +41,4 @@ client.on(Events.MessageCreate, async msg => {
         await video(msg);
     }
 });
-
 await client.login(process.env.DISCORD_TOKEN)

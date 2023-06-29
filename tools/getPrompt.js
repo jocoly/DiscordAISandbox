@@ -1,3 +1,5 @@
 export function getPrompt(msg) {
-    return msg.content.split(" ").slice(1).join(' ');
+    if (msg.content.startsWith("!")) {
+            return msg.content.split(" ").slice(1).join(' ');
+    } else return msg.content;
 }

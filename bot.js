@@ -3,6 +3,8 @@ import {Client, Events, GatewayIntentBits} from 'discord.js';
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
 import {img2img} from "./commands/img2img.js";
+import {xlvid} from "./commands/xlvid.js";
+import {upscalevid} from "./commands/upscalevid.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -19,6 +21,14 @@ if (process.env.STABLE_DIFFUSION === 'true') {
 let TEXT_TO_VIDEO = false;
 if (process.env.TEXT_TO_VIDEO === 'true') {
     TEXT_TO_VIDEO = true;
+}
+let IMAGE_TO_IMAGE = false;
+if (process.env.IMAGE_TO_IMAGE === 'true') {
+    IMAGE_TO_IMAGE = true;
+}
+let XL_VIDEO = false;
+if (process.env.XL_VIDEO === 'true') {
+    XL_VIDEO = true;
 }
 let DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
@@ -42,8 +52,20 @@ client.on(Events.MessageCreate, async msg => {
         await video(msg);
     }
 
-    if (msg.content.includes('!img2img')) {
+    if (msg.content.includes('!img2img') && IMAGE_TO_IMAGE) {
         await img2img(msg);
     }
-});
+
+    if (msg.content.includes('!xlvid')) {
+        await xlvid(msg);
+    }
+
+    if (msg.content.includes('!upscalevid')) {
+        const ref = await msg.channel.messages.fetch(msg.reference.messageId)
+        const refRef = await msg.channel.messages.fetch(ref.reference.messageId)
+        if (ref.attachments.size > 0 && ref.author.id === client.user.id && refRef.content.includes('!xlvid')) {
+            await upscalevid(msg);
+        }
+    }
+ });
 await client.login(process.env.DISCORD_TOKEN)

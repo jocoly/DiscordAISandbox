@@ -2,7 +2,7 @@ import {getNumImages} from "./getNumImages.js";
 import {callBackendPipeline} from "./backendAPI.js";
 import {getPrompt} from "./getPrompt.js";
 import fs from "fs";
-import {queue} from "../bot.js";
+import {client, queue} from "../bot.js";
 
 export async function processQueue() {
     while (queue.length > 0) {
@@ -14,6 +14,9 @@ export async function processQueue() {
             console.log("Error deleting enqueue message:" + error);
         }
         const confirmationMessage = await msg.reply('Processing your request...');
+        if (msg.author.id === client.user.id) {
+            let msg = await msg.channel.messages.fetch(msg.reference.messageId);
+        }
         let numImages;
         if (msg.content.includes('!img2img')){
             numImages = 1;
@@ -31,7 +34,7 @@ export async function processQueue() {
         }
         try {
             const results = await callBackendPipeline(getPrompt(msg), queue[0].pipeline, numImages, imageUrl);
-            await msg.reply({files: results});
+            await msg.reply({files: results, content: getPrompt(msg)});
             await confirmationMessage.delete();
             if (process.env.DELETE_AFTER_SENDING == 'true') {
                 for (const result of results) {

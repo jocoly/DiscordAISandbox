@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 
-const REQUEST_TIMEOUT_SEC = 120000
+const REQUEST_TIMEOUT_SEC = 600000
 export async function callBackendPipeline(text_prompt, pipeline, num, image_url) {
     const start_time = new Date();
     const backendUrl = process.env.BACKEND_ADDRESS + ":" + process.env.PORT

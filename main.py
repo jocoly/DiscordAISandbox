@@ -56,6 +56,26 @@ if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
     image_to_image_pipe = image_to_image_pipe.to(device)
     image_to_image_pipe.enable_model_cpu_offload()
 
+if (os.getenv("XL_VIDEO")) == 'true':
+    print("Loading Modelscope Text-to-Video XL model")
+    t2v_xl_pipe = DiffusionPipeline.from_pretrained('cerspense/zeroscope_v2_576w',
+                                                    torch_dtype=torch.float16,
+                                                    variant='fp16')
+    t2v_xl_pipe.scheduler = DPMSolverMultistepScheduler.from_config(t2v_xl_pipe.scheduler.config)
+    t2v_xl_pipe = t2v_xl_pipe.to(device)
+    t2v_xl_pipe.enable_model_cpu_offload()
+    t2v_xl_pipe.enable_vae_slicing()
+
+if (os.getenv("XL_VIDEO_UPSCALE")) == 'true':
+    print("Loading Modelscope Text-to-Video XL upscale model")
+    t2v_xl_upscale_pipe = DiffusionPipeline.from_pretrained('cerspense/zeroscope_v2_XL',
+                                                            torch_dtype=torch.float16,
+                                                            variant='fp16')
+    t2v_xl_upscale_pipe.scheduler = DPMSolverMultistepScheduler.from_config(t2v_xl_upscale_pipe.scheduler.config)
+    t2v_xl_upscale_pipe = t2v_xl_upscale_pipe.to(device)
+    t2v_xl_upscale_pipe.enable_model_cpu_offload()
+    t2v_xl_upscale_pipe.enable_vae_slicing()
+
 processing_lock = threading.Lock()
 
 
@@ -92,18 +112,14 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             video_frames = text_to_video_pipe(
                 prompt=prompt,
                 num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
                 width=int(os.getenv("VIDEO_WIDTH")),
                 height=int(os.getenv("VIDEO_HEIGHT")),
                 generator=generator,
             ).frames
-            Path(output_dir).mkdir(parents=True, exist_ok=True)
-            file_name = str(uuid.uuid4()) + '.mp4'
-            mp4_file_path = os.path.join(output_dir, file_name)
-            export_to_video(video_frames, mp4_file_path)
-            gif_file_path = convert_to_gif(mp4_file_path)
-            os.remove(mp4_file_path)
+            gif_file_path = save_frames(video_frames, output_dir)
             process_output.append(gif_file_path)
         case "ImageToImage":
             response = requests.get(img_url)
@@ -121,6 +137,32 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             image_path = os.path.join(output_dir, file_name)
             image.save(image_path, format='png')
             process_output.append(image_path)
+        case "t2vxl":
+            video_frames = t2v_xl_pipe(
+                prompt=prompt,
+                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                height=320,
+                width=576,
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                generator=generator,
+            ).frames
+            gif_file_path = save_frames(video_frames, output_dir)
+            process_output.append(gif_file_path)
+        case "t2vxlUpscale":
+            video_frames = t2v_xl_upscale_pipe(
+                prompt=prompt,
+                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                height=576,
+                width=1024,
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                generator=generator,
+            ).frames
+            gif_file_path = save_frames(video_frames, output_dir)
+            process_output.append(gif_file_path)
 
     gen_time = time.time() - start_time
     print(f"Created generation in {gen_time} ms")
@@ -143,6 +185,16 @@ def process_api():
 @app.route("/", methods=["GET"])
 def health_check():
     return jsonify(success=True)
+
+
+def save_frames(video_frames, output_dir):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    file_name = str(uuid.uuid4()) + '.mp4'
+    mp4_file_path = os.path.join(output_dir, file_name)
+    export_to_video(video_frames, mp4_file_path)
+    gif_file_path = convert_to_gif(mp4_file_path)
+    os.remove(mp4_file_path)
+    return gif_file_path
 
 
 def convert_to_gif(mp4_file_path):

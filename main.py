@@ -3,14 +3,18 @@ import subprocess
 import threading
 import time
 import uuid
+from io import BytesIO
 from pathlib import Path
+
+import requests
+from PIL import Image
 from diffusers.utils import export_to_video
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import torch
 import os
-from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
+from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, DPMSolverMultistepScheduler
 
 load_dotenv('./.env')
 app = Flask(__name__)
@@ -43,10 +47,19 @@ if (os.getenv("TEXT_TO_VIDEO")) == 'true':
     text_to_video_pipe.enable_model_cpu_offload()
     text_to_video_pipe.enable_vae_slicing()
 
+if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
+    print("Loading Image-to-Image model")
+    image_to_image_pipe = StableDiffusionImg2ImgPipeline.from_pretrained('runwayml/stable-diffusion-v1-5',
+                                                                         torch_dtype=torch.float16,
+                                                                         variant='fp16')
+    image_to_image_pipe.scheduler = DPMSolverMultistepScheduler.from_config(image_to_image_pipe.scheduler.config)
+    image_to_image_pipe = image_to_image_pipe.to(device)
+    image_to_image_pipe.enable_model_cpu_offload()
+
 processing_lock = threading.Lock()
 
 
-def process(prompt: str, pipeline: str, num: int):
+def process(prompt: str, pipeline: str, num: int, img_url: str):
     start_time = time.time()
     print("Processing query...")
     seed = random.randint(0, 100000)
@@ -92,6 +105,22 @@ def process(prompt: str, pipeline: str, num: int):
             gif_file_path = convert_to_gif(mp4_file_path)
             os.remove(mp4_file_path)
             process_output.append(gif_file_path)
+        case "ImageToImage":
+            response = requests.get(img_url)
+            input_image = Image.open(BytesIO(response.content)).convert("RGB")
+            input_image = input_image.resize((768, 512))
+            image_array = image_to_image_pipe(
+                prompt=prompt,
+                image=input_image,
+                strength=float(os.getenv("IMG2IMG_STRENGTH")),
+                guidance_scale=float(os.getenv("IMG2IMG_GUIDANCE_SCALE")),
+                num_inference_steps=int(os.getenv("IMG2IMG_INFERENCE_STEPS")),
+            ).images
+            file_name = str(uuid.uuid4()) + '.png'
+            image = image_array[0]
+            image_path = os.path.join(output_dir, file_name)
+            image.save(image_path, format='png')
+            process_output.append(image_path)
 
     gen_time = time.time() - start_time
     print(f"Created generation in {gen_time} ms")
@@ -104,8 +133,9 @@ def process_api():
     text_prompt = json_data["text_prompt"]
     pipeline = json_data["pipeline"]
     num = int(json_data["num"])
+    image_url = json_data["image_url"]
     with processing_lock:
-        generation = process(text_prompt, pipeline, num)
+        generation = process(text_prompt, pipeline, num, image_url)
     response = {'generation': generation}
     return jsonify(response)
 
@@ -124,4 +154,3 @@ def convert_to_gif(mp4_file_path):
 
 if __name__ == "__main__":
     app.run(host=os.getenv("BACKEND_ADDRESS"), port=os.getenv("PORT"), debug=False)
-

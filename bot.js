@@ -2,6 +2,7 @@ import {} from "dotenv/config";
 import {Client, Events, GatewayIntentBits} from 'discord.js';
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
+import {img2img} from "./commands/img2img.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -39,6 +40,10 @@ client.on(Events.MessageCreate, async msg => {
 
     if (msg.content.includes('!video') && TEXT_TO_VIDEO) {
         await video(msg);
+    }
+
+    if (msg.content.includes('!img2img')) {
+        await img2img(msg);
     }
 });
 await client.login(process.env.DISCORD_TOKEN)

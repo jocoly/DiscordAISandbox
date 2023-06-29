@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 
 const REQUEST_TIMEOUT_SEC = 120000
-export async function callBackendPipeline(text_prompt, pipeline, num) {
+export async function callBackendPipeline(text_prompt, pipeline, num, image_url) {
     const start_time = new Date();
     const backendUrl = process.env.BACKEND_ADDRESS + ":" + process.env.PORT
     const response = await Promise.race([
@@ -13,7 +13,8 @@ export async function callBackendPipeline(text_prompt, pipeline, num) {
             body: JSON.stringify({
                 text_prompt,
                 pipeline,
-                num
+                num,
+                image_url,
             })
         }).then((response) => {
             if (!response.ok) {

@@ -8,17 +8,29 @@ export async function processQueue() {
     while (queue.length > 0) {
         const msg = queue[0].msg;
         const enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId)
-        if (enqueueMessage) {
-            try {
-                await enqueueMessage.delete();
-            } catch (error) {
-                console.log("Error deleting enqueueMessage:" + error);
-            }
+        try {
+            await enqueueMessage.delete();
+        } catch (error) {
+            console.log("Error deleting enqueue message:" + error);
         }
         const confirmationMessage = await msg.reply('Processing your request...');
-        const numImages = getNumImages(msg)
+        let numImages;
+        if (msg.content.includes('!img2img')){
+            numImages = 1;
+        } else {
+            numImages = getNumImages(msg);
+        }
+        let imageUrl = ""
+        if (msg.attachments.size > 0) {
+            try {
+                imageUrl = Array.from(msg.attachments.values())[0].url
+            } catch (error) {
+                console.log("Error getting attachment url:" + error)
+                await msg.reply("Error retrieving attachment. Try again later.")
+            }
+        }
         try {
-            const results = await callBackendPipeline(getPrompt(msg), queue[0].pipeline, numImages);
+            const results = await callBackendPipeline(getPrompt(msg), queue[0].pipeline, numImages, imageUrl);
             await msg.reply({files: results});
             await confirmationMessage.delete();
             if (process.env.DELETE_AFTER_SENDING == 'true') {

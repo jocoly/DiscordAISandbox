@@ -4,7 +4,7 @@ import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
 import {img2img} from "./commands/img2img.js";
 import {xlvid} from "./commands/xlvid.js";
-import {upscalevid} from "./commands/upscalevid.js";
+import {upscale} from "./commands/upscale.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -60,12 +60,8 @@ client.on(Events.MessageCreate, async msg => {
         await xlvid(msg);
     }
 
-    if (msg.content.includes('!upscalevid')) {
-        const ref = await msg.channel.messages.fetch(msg.reference.messageId)
-        const refRef = await msg.channel.messages.fetch(ref.reference.messageId)
-        if (ref.attachments.size > 0 && ref.author.id === client.user.id && refRef.content.includes('!xlvid')) {
-            await upscalevid(msg);
-        }
+    if (msg.content.includes('!upscale')) {
+        await upscale(msg);
     }
  });
 await client.login(process.env.DISCORD_TOKEN)

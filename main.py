@@ -14,7 +14,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import torch
 import os
-from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, DPMSolverMultistepScheduler
+from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionLatentUpscalePipeline, \
+    DPMSolverMultistepScheduler, DDIMScheduler
 
 load_dotenv('./.env')
 app = Flask(__name__)
@@ -66,15 +67,12 @@ if (os.getenv("XL_VIDEO")) == 'true':
     t2v_xl_pipe.enable_model_cpu_offload()
     t2v_xl_pipe.enable_vae_slicing()
 
-if (os.getenv("XL_VIDEO_UPSCALE")) == 'true':
-    print("Loading Modelscope Text-to-Video XL upscale model")
-    t2v_xl_upscale_pipe = DiffusionPipeline.from_pretrained('cerspense/zeroscope_v2_XL',
-                                                            torch_dtype=torch.float16,
-                                                            variant='fp16')
-    t2v_xl_upscale_pipe.scheduler = DPMSolverMultistepScheduler.from_config(t2v_xl_upscale_pipe.scheduler.config)
-    t2v_xl_upscale_pipe = t2v_xl_upscale_pipe.to(device)
-    t2v_xl_upscale_pipe.enable_model_cpu_offload()
-    t2v_xl_upscale_pipe.enable_vae_slicing()
+if (os.getenv("UPSCALE")) == 'true':
+    print("Loading Stable Diffusion Latent Upscale model")
+    upscale_pipe = StableDiffusionLatentUpscalePipeline.from_pretrained('stabilityai/sd-x2-latent-upscaler',
+                                                                        torch_dtype=torch.float16,
+                                                                        variant='fp16')
+    upscale_pipe = upscale_pipe.to(device)
 
 processing_lock = threading.Lock()
 
@@ -93,28 +91,25 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
         case "StableDiffusion":
             images_array = stable_diffusion_pipe(
                 prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
                 num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
-                guidance_scale=int(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
                 width=int(os.getenv("IMAGE_WIDTH")),
                 height=int(os.getenv("IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
             for index in range(num):
-                file_name = str(uuid.uuid4()) + '.png'
-                image = images_array[index]
-                image_path = os.path.join(output_dir, file_name)
-                image.save(image_path, format='png')
+                image_path = save_image(images_array[index], output_dir)
                 process_output.append(image_path)
         case "TextToVideo":
             video_frames = text_to_video_pipe(
                 prompt=prompt,
-                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
-                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
-                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
+                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("VIDEO_GUIDANCE_SCALE")),
                 width=int(os.getenv("VIDEO_WIDTH")),
                 height=int(os.getenv("VIDEO_HEIGHT")),
                 generator=generator,
@@ -127,42 +122,40 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             input_image = input_image.resize((768, 512))
             image_array = image_to_image_pipe(
                 prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 image=input_image,
-                strength=float(os.getenv("IMG2IMG_STRENGTH")),
-                guidance_scale=float(os.getenv("IMG2IMG_GUIDANCE_SCALE")),
                 num_inference_steps=int(os.getenv("IMG2IMG_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMG2IMG_GUIDANCE_SCALE")),
+                strength=float(os.getenv("IMG2IMG_STRENGTH")),
             ).images
-            file_name = str(uuid.uuid4()) + '.png'
-            image = image_array[0]
-            image_path = os.path.join(output_dir, file_name)
-            image.save(image_path, format='png')
+            image_path = save_image(image_array[0], output_dir)
             process_output.append(image_path)
         case "t2vxl":
             video_frames = t2v_xl_pipe(
                 prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
                 num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
-                height=320,
+                guidance_scale=float(os.getenv("VIDEO_GUIDANCE_SCALE")),
                 width=576,
-                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
-                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
-                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                height=320,
                 generator=generator,
             ).frames
             gif_file_path = save_frames(video_frames, output_dir)
             process_output.append(gif_file_path)
-        case "t2vxlUpscale":
-            video_frames = t2v_xl_upscale_pipe(
+        case "Upscale":
+            response = requests.get(img_url)
+            input_image = Image.open(BytesIO(response.content)).convert("RGB")
+            image_array = upscale_pipe(
                 prompt=prompt,
-                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
-                height=576,
-                width=1024,
-                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
-                guidance_scale=int(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                image=input_image,
+                num_inference_steps=int(os.getenv("UPSCALE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("UPSCALE_GUIDANCE_SCALE")),
                 generator=generator,
-            ).frames
-            gif_file_path = save_frames(video_frames, output_dir)
-            process_output.append(gif_file_path)
+            ).images
+            image_path = save_image(image_array[0], output_dir)
+            process_output.append(image_path)
 
     gen_time = time.time() - start_time
     print(f"Created generation in {gen_time} ms")
@@ -195,6 +188,13 @@ def save_frames(video_frames, output_dir):
     gif_file_path = convert_to_gif(mp4_file_path)
     os.remove(mp4_file_path)
     return gif_file_path
+
+
+def save_image(image, output_dir):
+    file_name = str(uuid.uuid4()) + '.png'
+    image_path = os.path.join(output_dir, file_name)
+    image.save(image_path, format='png')
+    return image_path
 
 
 def convert_to_gif(mp4_file_path):

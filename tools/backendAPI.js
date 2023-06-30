@@ -18,7 +18,7 @@ export async function callBackendPipeline(text_prompt, pipeline, num, image_url)
             })
         }).then((response) => {
             if (!response.ok) {
-                throw Error(response.statusText);
+                console.log("Error: " + response.statusText);
             }
             return response;
         }),

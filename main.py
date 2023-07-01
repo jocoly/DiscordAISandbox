@@ -15,7 +15,7 @@ from flask_cors import CORS
 import torch
 import os
 from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionLatentUpscalePipeline, \
-    DPMSolverMultistepScheduler, DDIMScheduler
+    DPMSolverMultistepScheduler
 
 load_dotenv('./.env')
 app = Flask(__name__)
@@ -32,7 +32,7 @@ if (os.getenv("STABLE_DIFFUSION")) == 'true':
     print("Loading Stable Diffusion 2 base model")
     stable_diffusion_pipe = DiffusionPipeline.from_pretrained('stabilityai/stable-diffusion-2-base',
                                                               torch_dtype=torch.float16,
-                                                              variant="fp16")
+                                                              variant='fp16')
     stable_diffusion_pipe.scheduler = DPMSolverMultistepScheduler.from_config(stable_diffusion_pipe.scheduler.config)
     stable_diffusion_pipe = stable_diffusion_pipe.to(device)
     stable_diffusion_pipe.enable_model_cpu_offload()
@@ -73,6 +73,57 @@ if (os.getenv("UPSCALE")) == 'true':
                                                                         torch_dtype=torch.float16,
                                                                         variant='fp16')
     upscale_pipe = upscale_pipe.to(device)
+
+if (os.getenv("REALISTIC_VISION")) == 'true':
+    print("Loading Realistic Vision model")
+    realistic_vision_pipe = DiffusionPipeline.from_pretrained('SG161222/Realistic_Vision_V2.0',
+                                                              torch_dtype=torch.float16,
+                                                              variant='fp16')
+    realistic_vision_pipe.scheduler = DPMSolverMultistepScheduler.from_config(realistic_vision_pipe.scheduler.config)
+    realistic_vision_pipe = realistic_vision_pipe.to(device)
+    realistic_vision_pipe.enable_model_cpu_offload()
+    realistic_vision_pipe.enable_vae_slicing()
+
+if (os.getenv("OPENJOURNEY")) == 'true':
+    print("Loading openjourney model")
+    openjourney_pipe = DiffusionPipeline.from_pretrained('prompthero/openjourney',
+                                                         torch_dtype=torch.float16,
+                                                         variant='fp16')
+    openjourney_pipe.scheduler = DPMSolverMultistepScheduler.from_config(openjourney_pipe.scheduler.config)
+    openjourney_pipe = openjourney_pipe.to(device)
+    openjourney_pipe.enable_model_cpu_offload()
+    openjourney_pipe.enable_vae_slicing()
+
+if (os.getenv("DREAM_SHAPER")) == 'true':
+    print("Loading Dream Shaper model")
+    dream_shaper_pipe = DiffusionPipeline.from_pretrained('Lykon/DreamShaper',
+                                                          torch_dtype=torch.float16,
+                                                          variant='fp16')
+    dream_shaper_pipe.scheduler = DPMSolverMultistepScheduler.from_config(dream_shaper_pipe.scheduler.config)
+    dream_shaper_pipe = dream_shaper_pipe.to(device)
+    dream_shaper_pipe.enable_model_cpu_offload()
+    dream_shaper_pipe.enable_vae_slicing()
+
+if (os.getenv("ANYTHING_V3")) == 'true':
+    print("Loading Anything-v3.0 model")
+    anything_pipe = DiffusionPipeline.from_pretrained('Linaqruf/anything-v3.0',
+                                                      torch_dtype=torch.float16,
+                                                      variant='fp16')
+    anything_pipe.scheduler = DPMSolverMultistepScheduler.from_config(anything_pipe.scheduler.config)
+    anything_pipe = anything_pipe.to(device)
+    anything_pipe.enable_model_cpu_offload()
+    anything_pipe.enable_vae_slicing()
+
+if (os.getenv("DREAMLIKE_PHOTOREAL")) == 'true':
+    print("Loading Dreamlike Photoreal model")
+    dreamlike_photoreal_pipe = DiffusionPipeline.from_pretrained('dreamlike-art/dreamlike-photoreal-2.0',
+                                                                 torch_dtype=torch.float16,
+                                                                 variant='fp16')
+    dreamlike_photoreal_pipe.scheduler = DPMSolverMultistepScheduler.from_config(
+        dreamlike_photoreal_pipe.scheduler.config)
+    dreamlike_photoreal_pipe = dreamlike_photoreal_pipe.to(device)
+    dreamlike_photoreal_pipe.enable_model_cpu_offload()
+    dreamlike_photoreal_pipe.enable_vae_slicing()
 
 processing_lock = threading.Lock()
 
@@ -156,9 +207,84 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             ).images
             image_path = save_image(image_array[0], output_dir)
             process_output.append(image_path)
+        case "RealisticVision":
+            images_array = realistic_vision_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "Openjourney":
+            images_array = openjourney_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "DreamShaper":
+            images_array = dream_shaper_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "Anything":
+            images_array = anything_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image_spoiler(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "DreamlikePhotoreal":
+            images_array = dreamlike_photoreal_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                width=int(os.getenv("IMAGE_WIDTH")),
+                height=int(os.getenv("IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image_spoiler(images_array[index], output_dir)
+                process_output.append(image_path)
 
     gen_time = time.time() - start_time
-    print(f"Created generation in {gen_time} ms")
+    print(f"Created generation in {gen_time} seconds")
     return process_output
 
 
@@ -193,6 +319,13 @@ def save_frames(video_frames, output_dir):
 def save_image(image, output_dir):
     file_name = str(uuid.uuid4()) + '.png'
     image_path = os.path.join(output_dir, file_name)
+    image.save(image_path, format='png')
+    return image_path
+
+
+def save_image_spoiler(image, output_dir):
+    filename = "SPOILER_" + str(random.randint(1000, 9999)) + ".png"
+    image_path = os.path.join(output_dir, filename)
     image.save(image_path, format='png')
     return image_path
 

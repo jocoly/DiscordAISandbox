@@ -27,11 +27,7 @@ export async function processQueue() {
             isReply = false;
         }
         if ((msg.content.includes("!upscale") || msg.content.includes("!img2img")) && isReply) {
-            if (msg.content.includes("!upscale")) {
-                prompt = getPrompt(refMsg);
-            } else {
-                prompt = getPrompt(msg)
-            }
+            prompt = getPrompt(refMsg)
             numImages = 1;
             if (refMsg.attachments.size > 0) {
                 try {

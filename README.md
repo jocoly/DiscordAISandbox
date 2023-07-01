@@ -6,31 +6,42 @@ Everything is locally hosted via a backend Python server. You'll need 16 GB mini
 
 Settings can be tweaked in a dotenv file. Copy the template below and add your own Discord token to get started.
 
+Make sure your bot 
+
 ## Supported commands:
 
-    `!test`
+    !test
     -Sends a test response to show that the bot is working.
 
-    `!drawX <prompt>`
+    !drawX <prompt>
     -Submits the prompt for processing using the Stable Diffusion 2 base model pipeline and replies with the result. Replace 'X' with an integer to specify the number of images to generate (default is 1).
 
-    `!video <prompt>`
-    -Submits the prompt for processing using the Modelscope Text-to-Video model pipeline and replies with the result.
+    !video <prompt>
+    -Submits the prompt for processing using the Modelscope Text-to-Video pipeline and replies with the result.
 
-    `!img2img <prompt>`
-    -Submits the prompt and either:
-        -the first file attachment from the message being replied to if the command is in a reply
-        -the first file attachment from the message the command is sent in if the command is not in a reply
+    !img2img <prompt>
+    -Submits the prompt and the first file attachment from:
+        -the reference message (the message being replied to) if the command is sent in a reply
+            - or -
+        -the message the command is sent in if the command is not in a reply
     ...for processing using the Stable Diffusion Image-to-Image model pipeline and replies with the result.
 
-    `!upscale`
-    -Submits either:
-        -the first file attachment from the message being replied to if the command is in a reply
-        -the first file attachment from the message the command is sent in if the command is not in a reply
+    !upscale
+    -Submits the prompt and the first file attachment from:
+        -the reference message (the message being replied to) if the command is sent in a reply
+            - or -
+        -the message the command is sent in if the command is not in a reply
     ...for processing using the Stable Diffusion Latent Upscale model pipeline and replies with the result.
 
-    `!xlvid <prompt>`
+    !xlvid <prompt>
     -Submits the prompt for processing using the Zeroscope_v2_576w Text-to-Video model pipeline and replies with the result.
+
+    And the following work just like !drawX but use different models:
+    -!realistic/!rv: Realistic Vision 2.0
+    -!openjourney/!oj: Openjourney
+    -!dreamshaper/!ds: Dream Shaper
+    -!anything: Anything_v3.0
+    -!photoreal/!pr: Dreamlike Photoreal
 
 ## To run:
 
@@ -79,6 +90,10 @@ Settings can be tweaked in a dotenv file. Copy the template below and add your o
 -Install Python requirements
     
     pip install -r "requirements.txt"
+
+-Install Node.js requirements
+
+    npm install
 
 -Start the backend server (will take a while to download the models the first time)
     

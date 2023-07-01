@@ -1,0 +1,10 @@
+{
+  "name": "DiscordAISandbox",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.1"
+  }
+}

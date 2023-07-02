@@ -1,5 +1,6 @@
 import {} from "dotenv/config";
 import {Client, Events, GatewayIntentBits} from 'discord.js';
+import {chat} from "./commands/chat.js"
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
 import {img2img} from "./commands/img2img.js";
@@ -10,6 +11,7 @@ import {openjourney} from "./commands/openjourney.js";
 import {dreamShaper} from "./commands/dreamShaper.js";
 import {anything} from "./commands/anything.js";
 import {dreamlikePhotoreal} from "./commands/dreamlikePhotoreal.js";
+import {audio} from "./commands/audio.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -19,6 +21,10 @@ let CONTAIN_BOT = false;
 if (process.env.CONTAIN_BOT === 'true') {
     CONTAIN_BOT = true;
 }
+let CHAT = false;
+if (process.env.CHAT === 'true') {
+    CHAT = true;
+}
 let STABLE_DIFFUSION = false;
 if (process.env.STABLE_DIFFUSION === 'true') {
     STABLE_DIFFUSION = true;
@@ -26,6 +32,10 @@ if (process.env.STABLE_DIFFUSION === 'true') {
 let TEXT_TO_VIDEO = false;
 if (process.env.TEXT_TO_VIDEO === 'true') {
     TEXT_TO_VIDEO = true;
+}
+let TEXT_TO_AUDIO = false;
+if (process.env.TEXT_TO_AUDIO === 'true') {
+    TEXT_TO_AUDIO = true;
 }
 let IMAGE_TO_IMAGE = false;
 if (process.env.IMAGE_TO_IMAGE === 'true') {
@@ -39,16 +49,16 @@ let UPSCALE = false;
 if (process.env.UPSCALE === 'true') {
     UPSCALE = true;
 }
-let REALISTIC = false;
-if (process.env.REALISTIC === 'true') {
-    REALISTIC = true;
+let REALISTIC_VISION = false;
+if (process.env.REALISTIC_VISION === 'true') {
+    REALISTIC_VISION = true;
 }
 let OPENJOURNEY = false;
 if (process.env.OPENJOURNEY === 'true') {
     OPENJOURNEY = true;
 }
 let DREAM_SHAPER = false;
-if (process.env.REALISTIC === 'true') {
+if (process.env.DREAM_SHAPER === 'true') {
     DREAM_SHAPER = true;
 }
 let ANYTHING_V3 = false;
@@ -74,11 +84,15 @@ client.on(Events.MessageCreate, async msg => {
         await msg.reply("Hello world!")
     }
 
+    if (msg.content.includes("!chat") && CHAT) {
+        await chat(msg);
+    }
+
     if (msg.content.includes("!draw") && STABLE_DIFFUSION) {
         await draw(msg);
     }
 
-    if ((msg.content.includes("!realistic") || msg.content.includes("!rv")) && REALISTIC) {
+    if ((msg.content.includes("!realistic") || msg.content.includes("!rv")) && REALISTIC_VISION) {
         await realisticVision(msg);
     }
 
@@ -100,6 +114,10 @@ client.on(Events.MessageCreate, async msg => {
 
     if (msg.content.includes('!video') && TEXT_TO_VIDEO) {
         await video(msg);
+    }
+
+    if (msg.content.includes('!audio') && TEXT_TO_AUDIO) {
+        await audio(msg);
     }
 
     if (msg.content.includes('!img2img') && IMAGE_TO_IMAGE) {

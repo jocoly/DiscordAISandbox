@@ -12,29 +12,38 @@ export async function processQueue() {
         let numImages;
         let imageUrl;
         let results;
-        const enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId)
+        let enqueueMessage;
+        let confirmationMessage;
+        let answer;
+        try {
+            enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId);
+        } catch (error) {
+            console.log("Error fetching queue message: " + error)
+        }
         try {
             await enqueueMessage.delete();
         } catch (error) {
             console.log("Error deleting enqueue message:" + error);
         }
-        const confirmationMessage = await msg.reply('Processing your request...');
+        if (queue[0].pipeline !== "Chat") {
+            confirmationMessage = await msg.reply('Processing your request...');
+        }
         let isReply;
         try {
-            refMsg = await msg.fetchReference()
+            refMsg = await msg.fetchReference();
             isReply = true;
         } catch (error) {
             isReply = false;
         }
         if ((msg.content.includes("!upscale") || msg.content.includes("!img2img")) && isReply) {
-            prompt = getPrompt(refMsg)
+            prompt = getPrompt(refMsg);
             numImages = 1;
             if (refMsg.attachments.size > 0) {
                 try {
-                    imageUrl = Array.from(refMsg.attachments.values())[0].url
+                    imageUrl = Array.from(refMsg.attachments.values())[0].url;
                 } catch (error) {
-                    console.log("Error getting attachment url:" + error)
-                    await msg.reply("Error retrieving attachment. Try again later.")
+                    console.log("Error getting attachment url:" + error);
+                    await msg.reply("Error retrieving attachment. Try again later.");
                 }
             }
         } else {
@@ -43,9 +52,9 @@ export async function processQueue() {
                 numImages = 1;
                 if (msg.attachments.size > 0) {
                     try {
-                        imageUrl = Array.from(msg.attachments.values())[0].url
+                        imageUrl = Array.from(msg.attachments.values())[0].url;
                     } catch (error) {
-                        console.log("Error getting attachment url:" + error)
+                        console.log("Error getting attachment url:" + error);
                         await msg.reply("Error retrieving attachment. Try again later.")
                     }
                 }
@@ -62,18 +71,26 @@ export async function processQueue() {
             console.log("Error getting results from backend: " + error)
         }
         try {
-            await msg.reply({files: results, content: getPrompt(msg)});
+            if (queue[0].pipeline === "Chat") {
+                answer = results[0].slice(6)
+                answer = answer.replace(/....$/,'')
+                await msg.reply(answer)
+            } else {
+                await msg.reply({files: results, content: getPrompt(msg)});
+            }
         } catch (error) {
             console.log("Error sending reply: " + error)
             await msg.reply("Internal server error. Try again later.")
         }
         try {
-            await confirmationMessage.delete();
+            if (queue[0].pipeline !== "Chat"){
+                await confirmationMessage.delete();
+            }
         } catch (error) {
             console.log("Error deleting confirmation message: " + error)
         }
         try {
-            if (process.env.DELETE_AFTER_SENDING === 'true') {
+            if (process.env.DELETE_AFTER_SENDING === 'true' && queue[0].pipeline !== "Chat") {
                 for (const result of results) {
                     await fs.unlinkSync(result)
                 }

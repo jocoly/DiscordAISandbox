@@ -15,7 +15,9 @@ from flask_cors import CORS
 import torch
 import os
 from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionLatentUpscalePipeline, \
-    DPMSolverMultistepScheduler
+    DPMSolverMultistepScheduler, AudioLDMPipeline
+import scipy
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 load_dotenv('./.env')
 app = Flask(__name__)
@@ -27,6 +29,12 @@ if torch.cuda.is_available():
     device = torch.device('cuda:0')
 else:
     device = torch.device('cpu')
+
+if (os.getenv("CHAT")) == 'true':
+    print("Loading Google FLAN-T5 language model")
+    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
+    chat_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large")
+    chat_model = chat_model.to(device)
 
 if (os.getenv("STABLE_DIFFUSION")) == 'true':
     print("Loading Stable Diffusion 2 base model")
@@ -47,6 +55,15 @@ if (os.getenv("TEXT_TO_VIDEO")) == 'true':
     text_to_video_pipe = text_to_video_pipe.to(device)
     text_to_video_pipe.enable_model_cpu_offload()
     text_to_video_pipe.enable_vae_slicing()
+
+if (os.getenv("TEXT_TO_AUDIO")) == 'true':
+    print("Loading Audio Latent Diffusion model")
+    text_to_audio_pipe = AudioLDMPipeline.from_pretrained("cvssp/audioldm-s-full-v2",
+                                                          torch_dtype=torch.float16,
+                                                          variant='fp16')
+    text_to_audio_pipe = text_to_audio_pipe.to(device)
+    text_to_audio_pipe.enable_sequential_cpu_offload()
+    text_to_audio_pipe.enable_vae_slicing()
 
 if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
     print("Loading Image-to-Image model")
@@ -139,6 +156,11 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
     output_dir = os.getenv("OUTPUT_DIR")
     process_output = []
     match pipeline:
+        case "Chat":
+            input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+            outputs = chat_model.generate(input_ids)
+            output_string = tokenizer.decode(outputs[0])
+            process_output.append(output_string)
         case "StableDiffusion":
             images_array = stable_diffusion_pipe(
                 prompt=prompt,
@@ -146,8 +168,8 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 num_images_per_prompt=num,
                 num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
                 guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                width=int(os.getenv("SD_IMAGE_WIDTH")),
+                height=int(os.getenv("SD_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -161,12 +183,23 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
                 num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
                 guidance_scale=float(os.getenv("VIDEO_GUIDANCE_SCALE")),
-                width=int(os.getenv("VIDEO_WIDTH")),
-                height=int(os.getenv("VIDEO_HEIGHT")),
+                width=256,
+                height=256,
                 generator=generator,
             ).frames
             gif_file_path = save_frames(video_frames, output_dir)
             process_output.append(gif_file_path)
+        case "TextToAudio":
+            audio = text_to_audio_pipe(
+                prompt=prompt,
+                num_inference_steps=int(os.getenv("AUDIO_INFERENCE_STEPS")),
+                audio_length_in_s=float(os.getenv("AUDIO_LENGTH_IN_SECONDS")),
+            ).audios[0]
+
+            file_name = str(uuid.uuid4()) + '.wav'
+            wav_file_path = os.path.join(output_dir, file_name)
+            scipy.io.wavfile.write(wav_file_path, rate=16000, data=audio)
+            process_output.append(wav_file_path)
         case "ImageToImage":
             response = requests.get(img_url)
             input_image = Image.open(BytesIO(response.content)).convert("RGB")
@@ -212,10 +245,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                num_inference_steps=int(os.getenv("RV_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("RV_GUIDANCE_SCALE")),
+                width=int(os.getenv("RV_IMAGE_WIDTH")),
+                height=int(os.getenv("RV_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -227,10 +260,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                num_inference_steps=int(os.getenv("OJ_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("OJ_GUIDANCE_SCALE")),
+                width=int(os.getenv("OJ_IMAGE_WIDTH")),
+                height=int(os.getenv("OJ_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -242,10 +275,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                num_inference_steps=int(os.getenv("DS_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("DS_GUIDANCE_SCALE")),
+                width=int(os.getenv("DS_IMAGE_WIDTH")),
+                height=int(os.getenv("DS_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -257,10 +290,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                num_inference_steps=int(os.getenv("ANYTHING_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("ANYTHING_GUIDANCE_SCALE")),
+                width=int(os.getenv("ANYTHING_IMAGE_WIDTH")),
+                height=int(os.getenv("ANYTHING_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -272,10 +305,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
-                width=int(os.getenv("IMAGE_WIDTH")),
-                height=int(os.getenv("IMAGE_HEIGHT")),
+                num_inference_steps=int(os.getenv("PR_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("PR_GUIDANCE_SCALE")),
+                width=int(os.getenv("PR_IMAGE_WIDTH")),
+                height=int(os.getenv("PR_IMAGE_HEIGHT")),
                 generator=generator,
             ).images
             Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -324,7 +357,7 @@ def save_image(image, output_dir):
 
 
 def save_image_spoiler(image, output_dir):
-    filename = "SPOILER_" + str(random.randint(1000, 9999)) + ".png"
+    filename = "SPOILER_" + str(random.randint(10000, 99999)) + ".png"
     image_path = os.path.join(output_dir, filename)
     image.save(image_path, format='png')
     return image_path

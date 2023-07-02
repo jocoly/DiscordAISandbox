@@ -16,6 +16,9 @@ Make sure your bot has Guilds and GuildMessages intents enabled in the server yo
 `!test`
 -Sends a test response to show that the bot is working.
 
+`!chat`
+-Sends a Google T5 text prompt and replies with the result
+
 `!drawX <prompt>`
 -Submits the prompt for processing using the Stable Diffusion 2 base model pipeline and replies with the result. Replace 'X' with an integer to specify the number of images to generate (default is 1).
 

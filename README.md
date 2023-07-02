@@ -1,47 +1,94 @@
 # Discord AI Sandbox
 
-## A Discord interface for Stable Diffusion Pipelines
+## A Discord interface for some of Huggingface's most-downloaded AI image and video generation models
 
-Everything is locally hosted via a backend Python server. You'll need 16 GB minimum VRAM to run the video pipelines.
+Everything is locally hosted via a backend Python server. You'll need 16 GB minimum VRAM to run the video pipelines. Everything else can run on CPU, but not very quickly.
 
 Settings can be tweaked in a dotenv file. Copy the template below and add your own Discord token to get started.
 
-Make sure your bot 
+Make sure your bot has Guilds and GuildMessages intents enabled in the server you want to use it in.
 
-## Supported commands:
+### Demos use the following prompt:
+`A portrait of a wise wizard, adorned in ornate robes and holding a crackling staff, emanating an aura of ancient magic.`
 
-    !test
-    -Sends a test response to show that the bot is working.
+## Commands:
 
-    !drawX <prompt>
-    -Submits the prompt for processing using the Stable Diffusion 2 base model pipeline and replies with the result. Replace 'X' with an integer to specify the number of images to generate (default is 1).
+`!test`
+-Sends a test response to show that the bot is working.
 
-    !video <prompt>
-    -Submits the prompt for processing using the Modelscope Text-to-Video pipeline and replies with the result.
+`!drawX <prompt>`
+-Submits the prompt for processing using the Stable Diffusion 2 base model pipeline and replies with the result. Replace 'X' with an integer to specify the number of images to generate (default is 1).
 
-    !img2img <prompt>
-    -Submits the prompt and the first file attachment from:
-        -the reference message (the message being replied to) if the command is sent in a reply
-            - or -
-        -the message the command is sent in if the command is not in a reply
-    ...for processing using the Stable Diffusion Image-to-Image model pipeline and replies with the result.
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/37319429-97ee-4cc4-aa6c-df4e826972f5)
 
-    !upscale
-    -Submits the prompt and the first file attachment from:
-        -the reference message (the message being replied to) if the command is sent in a reply
-            - or -
-        -the message the command is sent in if the command is not in a reply
-    ...for processing using the Stable Diffusion Latent Upscale model pipeline and replies with the result.
+`!video <prompt>`
+-Submits the prompt for processing using the Modelscope Text-to-Video pipeline and replies with the result.
 
-    !xlvid <prompt>
-    -Submits the prompt for processing using the Zeroscope_v2_576w Text-to-Video model pipeline and replies with the result.
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/2b909e1c-f68b-4041-9e6a-5d33420d9fdf)
 
-    And the following work just like !drawX but use different models:
-    -!realistic/!rv: Realistic Vision 2.0
-    -!openjourney/!oj: Openjourney
-    -!dreamshaper/!ds: Dream Shaper
-    -!anything: Anything_v3.0
-    -!photoreal/!pr: Dreamlike Photoreal
+![5d1132d6-587c-4175-a1a7-f1a6f37baf49](https://github.com/jocoly/DiscordAISandbox/assets/62028785/c51bf22f-0709-41fb-960a-a4f61807189f)
+
+`!img2img <prompt>`
+
+-Submits the prompt and the first attachment for processing using the Stable Diffusion Image-to-Image model pipeline.
+
+-Submits the prompt with the first attachment from the reference message if the command is sent as a reply.
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/fad818fb-2fd7-49b5-943b-66400df780d9)
+
+`!upscale`
+
+-Submits the first attachment for processing using the Stable Diffusion 2x upscale model pipeline.
+
+-Submits the first attachment from the reference message if the command is sent as a reply.
+
+Input (512x512):
+
+![frog1](https://github.com/jocoly/DiscordAISandbox/assets/62028785/8aad69bb-73d5-4ff6-a45c-8d9b6ffa1918)
+
+Result (1024x1024):
+
+![8b6fa288-9609-418a-bbf8-57921ed1b527](https://github.com/jocoly/DiscordAISandbox/assets/62028785/0d3d61b4-b84c-45b0-8cde-17980be11b3a)
+
+
+`!xlvid <prompt>`
+-Submits the prompt for processing using the Zeroscope_v2_576w Text-to-Video model pipeline and replies with the result.
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/ca71f9ef-6b94-49bc-a5d5-e787bb49d06a)
+
+![d51f95e9-3a54-4714-98a2-7df5b20c9810](https://github.com/jocoly/DiscordAISandbox/assets/62028785/764ed152-c85d-4014-be21-7b4baa9cbcc0)
+
+And the following work just like !drawX but use different models:
+
+`!realistic/!rv`
+-Realistic Vision 2.0
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/c8df23cc-8c39-415a-b92a-859a74ebefcf)
+
+    
+`!openjourney/!oj`
+-Openjourney
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/dd8660bb-f699-40eb-9a3c-e2c377098908)
+
+    
+`!dreamshaper/!ds`
+-Dream Shaper
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/cec6262a-1945-4b4e-b272-b5e2f67a6061)
+
+    
+`!anything`
+-Anything_v3.0
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/c1bc414a-b555-47a2-a7a5-c2b152734a56)
+
+    
+`!photoreal/!pr`
+-Dreamlike Photoreal
+
+![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/02142ff9-d150-4999-bf64-ebe38114de10)
+
 
 ## To run:
 
@@ -52,38 +99,43 @@ Make sure your bot
     IMAGE_TO_IMAGE=true
     XL_VIDEO=true
     UPSCALE=true
-
+    REALISTIC_VISION=true
+    OPENJOURNEY=true
+    DREAM_SHAPER=true
+    ANYTHING_V3=true
+    DREAMLIKE_PHOTOREAL=true
+    
     IMAGE_INFERENCE_STEPS=50
     IMAGE_GUIDANCE_SCALE=7.5
-
+    
     IMAGE_WIDTH=512
     IMAGE_HEIGHT=512
-
+    
     VIDEO_INFERENCE_STEPS=50
     VIDEO_GUIDANCE_SCALE=7.5
     VIDEO_NUM_FRAMES=24
-
+    
     VIDEO_WIDTH=256
     VIDEO_HEIGHT=256
-
+    
     IMG2IMG_STRENGTH=0.75
     IMG2IMG_INFERENCE_STEPS=50
     IMG2IMG_GUIDANCE_SCALE=7.5
-
+    
     UPSCALE_INFERENCE_STEPS=50
     UPSCALE_GUIDANCE_SCALE=7.5
-
-    NEGATIVE_PROMPT=blurry, watermark, gross, disgusting
-
+    
+    NEGATIVE_PROMPT=blurry, watermark, gross, disgusting, text, close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck
+    
     OUTPUT_DIR=./output/images/
     BACKEND_ADDRESS=127.0.0.1
     PORT=8001
-
+    
     CONTAIN_BOT=true
-
-    DISCORD_TOKEN=<TOKEN GOES HERE>
-    DISCORD_CHANNEL_ID=1077752711145078854
-
+    
+    DISCORD_TOKEN=<YOUR DISCORD TOKEN HERE>
+    DISCORD_CHANNEL_ID=<CHANNEL ID>
+    
     DELETE_AFTER_SENDING=true
     MAX_NUM_IMAGES=6
 

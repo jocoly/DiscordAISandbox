@@ -1,6 +1,8 @@
 import {} from "dotenv/config";
 import {Client, Events, GatewayIntentBits} from 'discord.js';
-import {chat} from "./commands/chat.js"
+import {Configuration, OpenAIApi} from 'openai';
+import {ask} from "./commands/ask.js";
+import {chat} from "./commands/chat.js";
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
 import {caption} from "./commands/caption.js";
@@ -19,66 +21,22 @@ export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayInt
 
 export const queue = [];
 
-let CONTAIN_BOT = false;
-if (process.env.CONTAIN_BOT === 'true') {
-    CONTAIN_BOT = true;
-}
-let CHAT = false;
-if (process.env.CHAT === 'true') {
-    CHAT = true;
-}
-let STABLE_DIFFUSION = false;
-if (process.env.STABLE_DIFFUSION === 'true') {
-    STABLE_DIFFUSION = true;
-}
-let TEXT_TO_VIDEO = false;
-if (process.env.TEXT_TO_VIDEO === 'true') {
-    TEXT_TO_VIDEO = true;
-}
-let TEXT_TO_AUDIO = false;
-if (process.env.TEXT_TO_AUDIO === 'true') {
-    TEXT_TO_AUDIO = true;
-}
-let TEXT_TO_SPEECH = false;
-if (process.env.TEXT_TO_SPEECH === 'true') {
-    TEXT_TO_SPEECH = true;
-}
-let CAPTION = false;
-if (process.env.CAPTION === 'true') {
-    CAPTION = true;
-}
-let IMAGE_TO_IMAGE = false;
-if (process.env.IMAGE_TO_IMAGE === 'true') {
-    IMAGE_TO_IMAGE = true;
-}
-let XL_VIDEO = false;
-if (process.env.XL_VIDEO === 'true') {
-    XL_VIDEO = true;
-}
-let UPSCALE = false;
-if (process.env.UPSCALE === 'true') {
-    UPSCALE = true;
-}
-let REALISTIC_VISION = false;
-if (process.env.REALISTIC_VISION === 'true') {
-    REALISTIC_VISION = true;
-}
-let OPENJOURNEY = false;
-if (process.env.OPENJOURNEY === 'true') {
-    OPENJOURNEY = true;
-}
-let DREAM_SHAPER = false;
-if (process.env.DREAM_SHAPER === 'true') {
-    DREAM_SHAPER = true;
-}
-let ANYTHING_V3 = false;
-if (process.env.ANYTHING_V3 === 'true') {
-    ANYTHING_V3 = true;
-}
-let DREAMLIKE_PHOTOREAL = false;
-if (process.env.DREAMLIKE_PHOTOREAL === 'true') {
-    DREAMLIKE_PHOTOREAL = true;
-}
+let CONTAIN_BOT = process.env.CONTAIN_BOT === 'true';
+let CHAT = process.env.CHAT === 'true';
+let ASK = process.env.ASK === 'true';
+let STABLE_DIFFUSION = process.env.STABLE_DIFFUSION === 'true';
+let TEXT_TO_VIDEO = process.env.TEXT_TO_VIDEO === 'true';
+let TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
+let TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
+let CAPTION = process.env.CAPTION === 'true';
+let IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
+let XL_VIDEO = process.env.XL_VIDEO === 'true';
+let UPSCALE = process.env.UPSCALE === 'true';
+let REALISTIC_VISION = process.env.REALISTIC_VISION === 'true';
+let OPENJOURNEY = process.env.OPENJOURNEY === 'true';
+let DREAM_SHAPER = process.env.DREAM_SHAPER === 'true';
+let ANYTHING_V3 = process.env.ANYTHING_V3 === 'true';
+let DREAMLIKE_PHOTOREAL = process.env.DREAMLIKE_PHOTOREAL === 'true';
 
 let DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
@@ -86,7 +44,12 @@ client.once(Events.ClientReady, c => {
     console.log(`Logged in as ${client.user.tag}.`);
 });
 
+const configuration = new Configuration ({apiKey: process.env.OPENAI_TOKEN,});
+export const openai = new OpenAIApi(configuration);
+
+
 client.on(Events.MessageCreate, async msg => {
+    if (msg.content.includes('!^chat')) await chat(msg); //bot can see his own messages for auto chat
     if (msg.author.id === client.user.id) return;
     if (CONTAIN_BOT && msg.channel.id !== DISCORD_CHANNEL_ID) return;
     let isReply, refMsg, isCommand, isMention;
@@ -105,6 +68,10 @@ client.on(Events.MessageCreate, async msg => {
 
     if (msg.content.includes("!test")) {
         await msg.reply("Hello world!")
+    }
+
+    if (msg.content.includes("!ask") && ASK) {
+        await ask(msg);
     }
 
     if (msg.content.includes("!chat") && CHAT) {

@@ -3,6 +3,7 @@ import {callBackendPipeline} from "./backendAPI.js";
 import {getPrompt} from "./getPrompt.js";
 import fs from "fs";
 import {queue} from "../bot.js";
+import {commandRequiresFile} from "./commandRequiresFile.js";
 
 export async function processQueue() {
     while (queue.length > 0) {
@@ -15,6 +16,7 @@ export async function processQueue() {
         let enqueueMessage;
         let confirmationMessage;
         let answer;
+        let isReply;
         try {
             enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId);
         } catch (error) {
@@ -25,18 +27,18 @@ export async function processQueue() {
         } catch (error) {
             console.log("Error deleting enqueue message:" + error);
         }
-        if (queue[0].pipeline !== "Chat") {
+        if (queue[0].pipeline !== "Ask") {
             confirmationMessage = await msg.reply('Processing your request...');
         }
-        let isReply;
+
         try {
             refMsg = await msg.fetchReference();
             isReply = true;
         } catch (error) {
             isReply = false;
         }
-        if ((msg.content.includes("!upscale") || msg.content.includes("!img2img") || msg.content.includes("!caption")) && isReply) {
-            prompt = getPrompt(refMsg);
+        if (await commandRequiresFile(msg) && isReply) {
+            prompt = await getPrompt(refMsg);
             numImages = 1;
             if (refMsg.attachments.size > 0) {
                 try {
@@ -47,8 +49,8 @@ export async function processQueue() {
                 }
             }
         } else {
-            if ((msg.content.includes("!upscale") || msg.content.includes("!img2img") || msg.content.includes("!caption")) && !isReply) {
-                prompt = getPrompt(msg);
+            if (await commandRequiresFile(msg) && !isReply) {
+                prompt = await getPrompt(msg);
                 numImages = 1;
                 if (msg.attachments.size > 0) {
                     try {
@@ -59,8 +61,8 @@ export async function processQueue() {
                     }
                 }
             } else {
-                prompt = getPrompt(msg);
-                numImages = getNumImages(msg);
+                prompt = await getPrompt(msg);
+                numImages = await getNumImages(msg);
                 imageUrl = "";
             }
         }
@@ -71,29 +73,28 @@ export async function processQueue() {
             console.log("Error getting results from backend: " + error)
         }
         try {
-            if (queue[0].pipeline === "Chat") {
+            if (queue[0].pipeline === "Ask") {
                 console.log(results[0])
-                answer = results[0].slice(6)
-                answer = answer.replace(/....$/,'')
+                answer = results[0].replace( /(<([^>]+)>)/ig, '')
                 await msg.reply(answer)
             } else if (queue[0].pipeline === "Caption") {
                 await msg.reply(results[0])
             } else {
-                await msg.reply({files: results, content: getPrompt(msg)});
+                await msg.reply({files: results, content: await getPrompt(msg)});
             }
         } catch (error) {
             console.log("Error sending reply: " + error)
             await msg.reply("Internal server error. Try again later.")
         }
         try {
-            if (queue[0].pipeline !== "Chat"){
+            if (queue[0].pipeline !== "Ask"){
                 await confirmationMessage.delete();
             }
         } catch (error) {
             console.log("Error deleting confirmation message: " + error)
         }
         try {
-            if (process.env.DELETE_AFTER_SENDING === 'true' && queue[0].pipeline !== "Chat"&& queue[0].pipeline !== "Caption") {
+            if (process.env.DELETE_AFTER_SENDING === 'true' && queue[0].pipeline !== "Ask"&& queue[0].pipeline !== "Caption") {
                 for (const result of results) {
                     await fs.unlinkSync(result)
                 }

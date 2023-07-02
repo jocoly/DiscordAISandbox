@@ -33,12 +33,12 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-if (os.getenv("CHAT")) == 'true':
+if (os.getenv("ASK")) == 'true':
     print("Loading Google FLAN-T5 language model")
-    chat_tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
-    chat_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large",
-                                                            device_map="auto",
-                                                            torch_dtype=torch.float16)
+    ask_tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
+    ask_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large",
+                                                           device_map="auto",
+                                                           torch_dtype=torch.float16)
 
 if (os.getenv("STABLE_DIFFUSION")) == 'true':
     print("Loading Stable Diffusion 2 base model")
@@ -177,10 +177,10 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
     output_dir = os.getenv("OUTPUT_DIR")
     process_output = []
     match pipeline:
-        case "Chat":
-            input_ids = chat_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
-            outputs = chat_model.generate(input_ids)
-            output_string = chat_tokenizer.decode(outputs[0])
+        case "Ask":
+            input_ids = ask_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+            outputs = ask_model.generate(input_ids)
+            output_string = ask_tokenizer.decode(outputs[0])
             process_output.append(output_string)
         case "StableDiffusion":
             images_array = stable_diffusion_pipe(

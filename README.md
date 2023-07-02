@@ -17,7 +17,7 @@ Make sure your bot has Guilds and GuildMessages intents enabled in the server yo
 -Sends a test response to show that the bot is working.
 
 `!chat`
--Sends a Google T5 text prompt and replies with the result
+-Sends a Google T5 text prompt and replies with the result.
 
 `!drawX <prompt>`
 -Submits the prompt for processing using the Stable Diffusion 2 base model pipeline and replies with the result. Replace 'X' with an integer to specify the number of images to generate (default is 1).
@@ -31,9 +31,15 @@ Make sure your bot has Guilds and GuildMessages intents enabled in the server yo
 
 ![5d1132d6-587c-4175-a1a7-f1a6f37baf49](https://github.com/jocoly/DiscordAISandbox/assets/62028785/c51bf22f-0709-41fb-960a-a4f61807189f)
 
+`!audio <prompt>`
+-Submits the prompt for processing using the Audio Latent Diffusion model and replies with the result.
+
+`!speech <prompt>`
+-Submits the prompt for processing using the Microsoft text-to-speech model and replies with the result.
+
 `!img2img <prompt>`
 
--Submits the prompt and the first attachment for processing using the Stable Diffusion Image-to-Image model pipeline.
+-Submits the prompt and the first attachment for processing using the Stable Diffusion Image-to-Image model pipeline if the command is sent as a standalone message.
 
 -Submits the prompt with the first attachment from the reference message if the command is sent as a reply.
 
@@ -41,7 +47,7 @@ Make sure your bot has Guilds and GuildMessages intents enabled in the server yo
 
 `!upscale`
 
--Submits the first attachment for processing using the Stable Diffusion 2x upscale model pipeline.
+-Submits the first attachment for processing using the Stable Diffusion 2x upscale model pipeline if the command is sent as a standalone message.
 
 -Submits the first attachment from the reference message if the command is sent as a reply.
 
@@ -60,6 +66,11 @@ Result (1024x1024):
 ![image](https://github.com/jocoly/DiscordAISandbox/assets/62028785/ca71f9ef-6b94-49bc-a5d5-e787bb49d06a)
 
 ![d51f95e9-3a54-4714-98a2-7df5b20c9810](https://github.com/jocoly/DiscordAISandbox/assets/62028785/764ed152-c85d-4014-be21-7b4baa9cbcc0)
+
+`!caption`
+-Submits the first attachment for processing using the GPT-2 image caption pipeline if the command is sent as a standalone message.
+
+Submits the first attachment from the reference message if the command is sent as a reply.
 
 And the following work just like !drawX but use different models:
 
@@ -97,9 +108,24 @@ And the following work just like !drawX but use different models:
 
 -Clone the repo and copy the following into a new file called '.env' saved in the root directory of the project.
 
+    DISCORD_TOKEN=<Your token here>
+    DISCORD_CHANNEL_ID=<Channel ID if CONTAIN_BOT==true>
+
+    OUTPUT_DIR=./output/images/
+    BACKEND_ADDRESS=127.0.0.1
+    PORT=8001
+    
+    CONTAIN_BOT=true
+    DELETE_AFTER_SENDING=true
+    MAX_NUM_IMAGES=6
+    
+    CHAT=true
     STABLE_DIFFUSION=true
     TEXT_TO_VIDEO=true
+    TEXT_TO_AUDIO=true
+    TEXT_TO_SPEECH=true
     IMAGE_TO_IMAGE=true
+    CAPTION=true
     XL_VIDEO=true
     UPSCALE=true
     REALISTIC_VISION=true
@@ -108,39 +134,54 @@ And the following work just like !drawX but use different models:
     ANYTHING_V3=true
     DREAMLIKE_PHOTOREAL=true
     
-    IMAGE_INFERENCE_STEPS=50
-    IMAGE_GUIDANCE_SCALE=7.5
-    
-    IMAGE_WIDTH=512
-    IMAGE_HEIGHT=512
+    SD_IMAGE_INFERENCE_STEPS=50
+    SD_IMAGE_GUIDANCE_SCALE=7.5
+    SD_IMAGE_WIDTH=512
+    SD_IMAGE_HEIGHT=512
     
     VIDEO_INFERENCE_STEPS=50
     VIDEO_GUIDANCE_SCALE=7.5
     VIDEO_NUM_FRAMES=24
-    
     VIDEO_WIDTH=256
     VIDEO_HEIGHT=256
     
-    IMG2IMG_STRENGTH=0.75
+    AUDIO_INFERENCE_STEPS=10
+    AUDIO_LENGTH_IN_SECONDS=5.0
+    
     IMG2IMG_INFERENCE_STEPS=50
     IMG2IMG_GUIDANCE_SCALE=7.5
+    IMG2IMG_STRENGTH=0.75
     
     UPSCALE_INFERENCE_STEPS=50
     UPSCALE_GUIDANCE_SCALE=7.5
     
+    RV_INFERENCE_STEPS=50
+    RV_GUIDANCE_SCALE=7.5
+    RV_IMAGE_WIDTH=512
+    RV_IMAGE_HEIGHT=512
+    
+    OJ_INFERENCE_STEPS=50
+    OJ_GUIDANCE_SCALE=7.5
+    OJ_IMAGE_WIDTH=512
+    OJ_IMAGE_HEIGHT=512
+    
+    DS_INFERENCE_STEPS=50
+    DS_GUIDANCE_SCALE=7.5
+    DS_IMAGE_WIDTH=512
+    DS_IMAGE_HEIGHT=512
+    
+    ANYTHING_INFERENCE_STEPS=50
+    ANYTHING_GUIDANCE_SCALE=7.5
+    ANYTHING_IMAGE_WIDTH=512
+    ANYTHING_IMAGE_HEIGHT=512
+    
+    PR_INFERENCE_STEPS=50
+    PR_GUIDANCE_SCALE=7.5
+    PR_IMAGE_WIDTH=768
+    PR_IMAGE_HEIGHT=768
+    
     NEGATIVE_PROMPT=blurry, watermark, gross, disgusting, text, close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck
-    
-    OUTPUT_DIR=./output/images/
-    BACKEND_ADDRESS=127.0.0.1
-    PORT=8001
-    
-    CONTAIN_BOT=true
-    
-    DISCORD_TOKEN=<YOUR DISCORD TOKEN HERE>
-    DISCORD_CHANNEL_ID=<CHANNEL ID>
-    
-    DELETE_AFTER_SENDING=true
-    MAX_NUM_IMAGES=6
+
 
 -Install Python requirements
     

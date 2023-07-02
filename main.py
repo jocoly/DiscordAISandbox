@@ -14,10 +14,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import torch
 import os
+import soundfile as sf
+from datasets import load_dataset
 from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, StableDiffusionLatentUpscalePipeline, \
     DPMSolverMultistepScheduler, AudioLDMPipeline
 import scipy
-from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import AutoProcessor, SpeechT5HifiGan, SpeechT5ForTextToSpeech, T5Tokenizer, \
+    T5ForConditionalGeneration, VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
 
 load_dotenv('./.env')
 app = Flask(__name__)
@@ -32,9 +35,10 @@ else:
 
 if (os.getenv("CHAT")) == 'true':
     print("Loading Google FLAN-T5 language model")
-    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
-    chat_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large")
-    chat_model = chat_model.to(device)
+    chat_tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
+    chat_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large",
+                                                            device_map="auto",
+                                                            torch_dtype=torch.float16)
 
 if (os.getenv("STABLE_DIFFUSION")) == 'true':
     print("Loading Stable Diffusion 2 base model")
@@ -64,6 +68,23 @@ if (os.getenv("TEXT_TO_AUDIO")) == 'true':
     text_to_audio_pipe = text_to_audio_pipe.to(device)
     text_to_audio_pipe.enable_sequential_cpu_offload()
     text_to_audio_pipe.enable_vae_slicing()
+
+if (os.getenv("TEXT_TO_SPEECH")) == 'true':
+    print("Loading Text-to-Speech model")
+    processor = AutoProcessor.from_pretrained("microsoft/speecht5_tts",
+                                              torch_dtype=torch.float16,
+                                              variant='fp16')
+    text_to_speech_model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
+    vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
+    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+    speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+
+if (os.getenv("CAPTION")) == 'true':
+    print("Loading image-captioning model")
+    caption_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+    feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+    caption_tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+    caption_model.to(device)
 
 if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
     print("Loading Image-to-Image model")
@@ -157,17 +178,17 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
     process_output = []
     match pipeline:
         case "Chat":
-            input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+            input_ids = chat_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
             outputs = chat_model.generate(input_ids)
-            output_string = tokenizer.decode(outputs[0])
+            output_string = chat_tokenizer.decode(outputs[0])
             process_output.append(output_string)
         case "StableDiffusion":
             images_array = stable_diffusion_pipe(
                 prompt=prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
-                num_inference_steps=int(os.getenv("IMAGE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("IMAGE_GUIDANCE_SCALE")),
+                num_inference_steps=int(os.getenv("SD_IMAGE_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("SD_IMAGE_GUIDANCE_SCALE")),
                 width=int(os.getenv("SD_IMAGE_WIDTH")),
                 height=int(os.getenv("SD_IMAGE_HEIGHT")),
                 generator=generator,
@@ -195,11 +216,30 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 num_inference_steps=int(os.getenv("AUDIO_INFERENCE_STEPS")),
                 audio_length_in_s=float(os.getenv("AUDIO_LENGTH_IN_SECONDS")),
             ).audios[0]
-
-            file_name = str(uuid.uuid4()) + '.wav'
-            wav_file_path = os.path.join(output_dir, file_name)
-            scipy.io.wavfile.write(wav_file_path, rate=16000, data=audio)
+            wav_file_path = save_audio(audio, output_dir)
             process_output.append(wav_file_path)
+        case "TextToSpeech":
+            inputs = processor(
+                text=prompt,
+                return_tensors="pt"
+            )
+            speech = text_to_speech_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
+            file_name = os.path.join(output_dir, str(random.randint(1111, 9999)) + ".wav")
+            sf.write(file_name, speech.numpy(), samplerate=16000)
+            process_output.append(file_name)
+        case "Caption":
+            max_length = 16
+            num_beams = 4
+            gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
+            response = requests.get(img_url)
+            input_image = Image.open(BytesIO(response.content)).convert("RGB")
+            images_array = [input_image]
+            pixel_values = feature_extractor(images=images_array, return_tensors='pt').pixel_values
+            pixel_values = pixel_values.to(device)
+            output_ids = caption_model.generate(pixel_values, **gen_kwargs)
+            preds = caption_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+            preds = [pred.strip() for pred in preds]
+            process_output.append(preds[0])
         case "ImageToImage":
             response = requests.get(img_url)
             input_image = Image.open(BytesIO(response.content)).convert("RGB")
@@ -361,6 +401,13 @@ def save_image_spoiler(image, output_dir):
     image_path = os.path.join(output_dir, filename)
     image.save(image_path, format='png')
     return image_path
+
+
+def save_audio(audio, output_dir):
+    file_name = str(uuid.uuid4()) + '.wav'
+    wav_file_path = os.path.join(output_dir, file_name)
+    scipy.io.wavfile.write(wav_file_path, rate=16000, data=audio)
+    return wav_file_path
 
 
 def convert_to_gif(mp4_file_path):

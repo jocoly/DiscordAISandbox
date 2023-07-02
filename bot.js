@@ -3,6 +3,7 @@ import {Client, Events, GatewayIntentBits} from 'discord.js';
 import {chat} from "./commands/chat.js"
 import {draw} from "./commands/draw.js";
 import {video} from "./commands/video.js";
+import {caption} from "./commands/caption.js";
 import {img2img} from "./commands/img2img.js";
 import {xlvid} from "./commands/xlvid.js";
 import {upscale} from "./commands/upscale.js";
@@ -12,6 +13,7 @@ import {dreamShaper} from "./commands/dreamShaper.js";
 import {anything} from "./commands/anything.js";
 import {dreamlikePhotoreal} from "./commands/dreamlikePhotoreal.js";
 import {audio} from "./commands/audio.js";
+import {speech} from "./commands/speech.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -36,6 +38,14 @@ if (process.env.TEXT_TO_VIDEO === 'true') {
 let TEXT_TO_AUDIO = false;
 if (process.env.TEXT_TO_AUDIO === 'true') {
     TEXT_TO_AUDIO = true;
+}
+let TEXT_TO_SPEECH = false;
+if (process.env.TEXT_TO_SPEECH === 'true') {
+    TEXT_TO_SPEECH = true;
+}
+let CAPTION = false;
+if (process.env.CAPTION === 'true') {
+    CAPTION = true;
 }
 let IMAGE_TO_IMAGE = false;
 if (process.env.IMAGE_TO_IMAGE === 'true') {
@@ -79,6 +89,19 @@ client.once(Events.ClientReady, c => {
 client.on(Events.MessageCreate, async msg => {
     if (msg.author.id === client.user.id) return;
     if (CONTAIN_BOT && msg.channel.id !== DISCORD_CHANNEL_ID) return;
+    let isReply, refMsg, isCommand, isMention;
+    try {
+        isCommand = Array.from(msg.content)[0] === '!';
+        isMention = Array.from(msg.content)[0] === '<';
+        refMsg = await msg.fetchReference()
+        isReply = true;
+    } catch (error) {
+        isReply = false;
+    }
+
+    if (isReply && !isCommand && !isMention && refMsg.author.id === client.user.id) {
+        await chat(msg)
+    }
 
     if (msg.content.includes("!test")) {
         await msg.reply("Hello world!")
@@ -120,6 +143,10 @@ client.on(Events.MessageCreate, async msg => {
         await audio(msg);
     }
 
+    if (msg.content.includes('!speech') && TEXT_TO_SPEECH) {
+        await speech(msg);
+    }
+
     if (msg.content.includes('!img2img') && IMAGE_TO_IMAGE) {
         await img2img(msg);
     }
@@ -130,6 +157,10 @@ client.on(Events.MessageCreate, async msg => {
 
     if (msg.content.includes('!upscale') && UPSCALE) {
         await upscale(msg);
+    }
+
+    if (msg.content.includes('!caption') && CAPTION) {
+        await caption(msg);
     }
  });
 await client.login(process.env.DISCORD_TOKEN)

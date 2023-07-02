@@ -35,7 +35,7 @@ export async function processQueue() {
         } catch (error) {
             isReply = false;
         }
-        if ((msg.content.includes("!upscale") || msg.content.includes("!img2img")) && isReply) {
+        if ((msg.content.includes("!upscale") || msg.content.includes("!img2img") || msg.content.includes("!caption")) && isReply) {
             prompt = getPrompt(refMsg);
             numImages = 1;
             if (refMsg.attachments.size > 0) {
@@ -47,7 +47,7 @@ export async function processQueue() {
                 }
             }
         } else {
-            if (msg.content.includes("!upscale") || msg.content.includes("!img2img") && !isReply) {
+            if ((msg.content.includes("!upscale") || msg.content.includes("!img2img") || msg.content.includes("!caption")) && !isReply) {
                 prompt = getPrompt(msg);
                 numImages = 1;
                 if (msg.attachments.size > 0) {
@@ -72,9 +72,12 @@ export async function processQueue() {
         }
         try {
             if (queue[0].pipeline === "Chat") {
+                console.log(results[0])
                 answer = results[0].slice(6)
                 answer = answer.replace(/....$/,'')
                 await msg.reply(answer)
+            } else if (queue[0].pipeline === "Caption") {
+                await msg.reply(results[0])
             } else {
                 await msg.reply({files: results, content: getPrompt(msg)});
             }
@@ -90,7 +93,7 @@ export async function processQueue() {
             console.log("Error deleting confirmation message: " + error)
         }
         try {
-            if (process.env.DELETE_AFTER_SENDING === 'true' && queue[0].pipeline !== "Chat") {
+            if (process.env.DELETE_AFTER_SENDING === 'true' && queue[0].pipeline !== "Chat"&& queue[0].pipeline !== "Caption") {
                 for (const result of results) {
                     await fs.unlinkSync(result)
                 }

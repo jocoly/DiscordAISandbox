@@ -1,6 +1,6 @@
 # Discord AI Sandbox
 
-## A Discord interface for some of Huggingface's most popular AI media models
+## A Discord interface for 17 of Huggingface's most popular AI media models
 
 There are 18 supported commands; a full list of the incorporated Huggingface models is at the bottom of this page.
 

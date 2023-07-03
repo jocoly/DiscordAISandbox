@@ -108,7 +108,7 @@ Result (1024x1024):
 
 ![img_8.png](tools/demo/img_8.png)
 
-![eefe6672-bddb-4f17-9ce8-af28213ff80e.gif](..%2F..%2FDownloads%2Feefe6672-bddb-4f17-9ce8-af28213ff80e.gif)
+![eefe6672-bddb-4f17-9ce8-af28213ff80e](https://github.com/jocoly/DiscordAISandbox/assets/62028785/14be2efa-895d-493b-aa94-827be79b12df)
 
 
 And the following work just like !drawX but use different models:

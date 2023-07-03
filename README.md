@@ -158,7 +158,7 @@ And the following work just like !drawX but use different models:
 
 [plasmo/vox2](https://huggingface.co/plasmo/vox2)
 
-#### [img_4.png](tools/demo/img_4.png)
+![img_4.png](tools/demo/img_4.png)
 
 ## To run:
 

@@ -27,7 +27,7 @@ Ex:
 
 Commands marked with * can be sent either as standalone messages with a file attachment, or as a reply to a message with a file attachment.
 
-`!test
+#### !test
 
 Sends a test response to show that the bot is working.
 

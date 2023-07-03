@@ -95,6 +95,16 @@ if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
     image_to_image_pipe = image_to_image_pipe.to(device)
     image_to_image_pipe.enable_model_cpu_offload()
 
+if (os.getenv("ANIMOV_512X")) == 'true':
+    print("Loading animov-512x model")
+    animov_pipe = DiffusionPipeline.from_pretrained('strangeman3107/animov-512x',
+                                                           torch_dtype=torch.float16,
+                                                           variant='fp16')
+    animov_pipe.scheduler = DPMSolverMultistepScheduler.from_config(animov_pipe.scheduler.config)
+    animov_pipe = animov_pipe.to(device)
+    animov_pipe.enable_model_cpu_offload()
+    animov_pipe.enable_vae_slicing()
+
 if (os.getenv("XL_VIDEO")) == 'true':
     print("Loading Modelscope Text-to-Video XL model")
     t2v_xl_pipe = DiffusionPipeline.from_pretrained('cerspense/zeroscope_v2_576w',
@@ -162,6 +172,26 @@ if (os.getenv("DREAMLIKE_PHOTOREAL")) == 'true':
     dreamlike_photoreal_pipe = dreamlike_photoreal_pipe.to(device)
     dreamlike_photoreal_pipe.enable_model_cpu_offload()
     dreamlike_photoreal_pipe.enable_vae_slicing()
+
+if (os.getenv("WAIFU_DIFFUSION")) == 'true':
+    print("Loading Waifu Diffusion model")
+    waifu_diffusion_pipe = DiffusionPipeline.from_pretrained('hakurei/waifu-diffusion',
+                                                             torch_dtype=torch.float32,
+                                                             variant='fp32')
+    waifu_diffusion_pipe.scheduler = DPMSolverMultistepScheduler.from_config(waifu_diffusion_pipe.scheduler.config)
+    waifu_diffusion_pipe = waifu_diffusion_pipe.to(device)
+    waifu_diffusion_pipe.enable_model_cpu_offload()
+    waifu_diffusion_pipe.enable_vae_slicing()
+
+if (os.getenv("VOX2")) == 'true':
+    print("Loading vox2 model")
+    vox2_pipe = DiffusionPipeline.from_pretrained('plasmo/vox2',
+                                                  torch_dtype=torch.float16,
+                                                  variant='fp16')
+    vox2_pipe.scheduler = DPMSolverMultistepScheduler.from_config(vox2_pipe.scheduler.config)
+    vox2_pipe = vox2_pipe.to(device)
+    vox2_pipe.enable_model_cpu_offload()
+    vox2_pipe.enable_vae_slicing()
 
 processing_lock = threading.Lock()
 
@@ -267,22 +297,32 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             ).frames
             gif_file_path = save_frames(video_frames, output_dir)
             process_output.append(gif_file_path)
+        case "animov":
+            video_frames = animov_pipe(
+                prompt=prompt + " - anime",
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_frames=int(os.getenv("VIDEO_NUM_FRAMES")),
+                num_inference_steps=int(os.getenv("VIDEO_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("VIDEO_GUIDANCE_SCALE")),
+                width=256,
+                height=256,
+                generator=generator,
+            ).frames
+            gif_file_path = save_frames(video_frames, output_dir)
+            process_output.append(gif_file_path)
         case "Upscale":
             response = requests.get(img_url)
             input_image = Image.open(BytesIO(response.content)).convert("RGB")
             image_array = upscale_pipe(
-                prompt=prompt,
-                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 image=input_image,
-                num_inference_steps=int(os.getenv("UPSCALE_INFERENCE_STEPS")),
-                guidance_scale=float(os.getenv("UPSCALE_GUIDANCE_SCALE")),
                 generator=generator,
             ).images
             image_path = save_image(image_array[0], output_dir)
             process_output.append(image_path)
         case "RealisticVision":
             images_array = realistic_vision_pipe(
-                prompt=prompt,
+                prompt=prompt + "(high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, "
+                                "Fujifilm XT3",
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
                 num_inference_steps=int(os.getenv("RV_INFERENCE_STEPS")),
@@ -297,7 +337,7 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
                 process_output.append(image_path)
         case "Openjourney":
             images_array = openjourney_pipe(
-                prompt=prompt,
+                prompt="mdjrny-v4 style " + prompt,
                 negative_prompt=os.getenv("NEGATIVE_PROMPT"),
                 num_images_per_prompt=num,
                 num_inference_steps=int(os.getenv("OJ_INFERENCE_STEPS")),
@@ -354,6 +394,36 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             Path(output_dir).mkdir(parents=True, exist_ok=True)
             for index in range(num):
                 image_path = save_image_spoiler(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "WaifuDiffusion":
+            images_array = waifu_diffusion_pipe(
+                prompt=prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("WD_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("WD_GUIDANCE_SCALE")),
+                width=int(os.getenv("WD_IMAGE_WIDTH")),
+                height=int(os.getenv("WD_IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image_spoiler(images_array[index], output_dir)
+                process_output.append(image_path)
+        case "vox2":
+            images_array = vox2_pipe(
+                prompt="voxel-ish, intricate detail: " + prompt,
+                negative_prompt=os.getenv("NEGATIVE_PROMPT"),
+                num_images_per_prompt=num,
+                num_inference_steps=int(os.getenv("VOX2_INFERENCE_STEPS")),
+                guidance_scale=float(os.getenv("VOX2_GUIDANCE_SCALE")),
+                width=int(os.getenv("VOX2_IMAGE_WIDTH")),
+                height=int(os.getenv("VOX2_IMAGE_HEIGHT")),
+                generator=generator,
+            ).images
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            for index in range(num):
+                image_path = save_image(images_array[index], output_dir)
                 process_output.append(image_path)
 
     gen_time = time.time() - start_time

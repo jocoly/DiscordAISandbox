@@ -4,18 +4,21 @@ import {Configuration, OpenAIApi} from 'openai';
 import {ask} from "./commands/ask.js";
 import {chat} from "./commands/chat.js";
 import {draw} from "./commands/draw.js";
-import {video} from "./commands/video.js";
-import {caption} from "./commands/caption.js";
 import {img2img} from "./commands/img2img.js";
-import {xlvid} from "./commands/xlvid.js";
 import {upscale} from "./commands/upscale.js";
+import {video} from "./commands/video.js";
+import {animov} from "./commands/animov.js";
+import {xlvid} from "./commands/xlvid.js";
+import {audio} from "./commands/audio.js";
+import {speech} from "./commands/speech.js";
+import {caption} from "./commands/caption.js";
 import {realisticVision} from "./commands/realisticVision.js";
 import {openjourney} from "./commands/openjourney.js";
 import {dreamShaper} from "./commands/dreamShaper.js";
 import {anything} from "./commands/anything.js";
 import {dreamlikePhotoreal} from "./commands/dreamlikePhotoreal.js";
-import {audio} from "./commands/audio.js";
-import {speech} from "./commands/speech.js";
+import {waifuDiffusion} from "./commands/waifuDiffusion.js";
+import {vox2} from "./commands/vox2.js";
 
 export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,],});
 
@@ -30,6 +33,7 @@ let TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
 let TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
 let CAPTION = process.env.CAPTION === 'true';
 let IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
+let ANIMOV = process.env.ANIMOV_512X === 'true';
 let XL_VIDEO = process.env.XL_VIDEO === 'true';
 let UPSCALE = process.env.UPSCALE === 'true';
 let REALISTIC_VISION = process.env.REALISTIC_VISION === 'true';
@@ -37,6 +41,8 @@ let OPENJOURNEY = process.env.OPENJOURNEY === 'true';
 let DREAM_SHAPER = process.env.DREAM_SHAPER === 'true';
 let ANYTHING_V3 = process.env.ANYTHING_V3 === 'true';
 let DREAMLIKE_PHOTOREAL = process.env.DREAMLIKE_PHOTOREAL === 'true';
+let WAIFU_DIFFUSION = process.env.WAIFU_DIFFUSION === 'true';
+let VOX2 = process.env.VOX2 === 'true';
 
 let DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
@@ -102,6 +108,14 @@ client.on(Events.MessageCreate, async msg => {
         await dreamlikePhotoreal(msg);
     }
 
+    if ((msg.content.includes("!waifu") || msg.content.includes("!wd")) && WAIFU_DIFFUSION) {
+        await waifuDiffusion(msg);
+    }
+
+    if (msg.content.includes("!vox") && VOX2) {
+        await vox2(msg);
+    }
+
     if (msg.content.includes('!video') && TEXT_TO_VIDEO) {
         await video(msg);
     }
@@ -116,6 +130,10 @@ client.on(Events.MessageCreate, async msg => {
 
     if (msg.content.includes('!img2img') && IMAGE_TO_IMAGE) {
         await img2img(msg);
+    }
+
+    if (msg.content.includes('!animov') && ANIMOV) {
+        await animov(msg);
     }
 
     if (msg.content.includes('!xlvid') && XL_VIDEO) {

@@ -8,7 +8,7 @@ Everything is locally hosted via a backend Python server. A FIFO queue in the Di
 
 You'll need 16 GB minimum VRAM to run the video pipelines. Everything else *can* run on CPU, but not very quickly.
 
-Settings can be tweaked in a dotenv file. Copy the template below and add your own Discord token to get started.
+Settings can be tweaked in a dotenv file. Copy the template below and add it to the root directory.
 
 Make sure your bot has Guilds and GuildMessages intents enabled in the server you want to use it in.
 

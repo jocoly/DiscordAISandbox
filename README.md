@@ -275,19 +275,35 @@ And the following work just like !drawX but use different models:
 
 ### Huggingface Models:
 [google/flan-t5-large](https://huggingface.co/google/flan-t5-large)
+
 [cvssp/audioldm-s-full-v2](https://huggingface.co/cvssp/audioldm-s-full-v2)
+
 [microsoft/speecht5_tts](https://huggingface.co/microsoft/speecht5_tts)
+
 [nlpconnect/vit-gpt2-image-captioning](https://huggingface.co/nlpconnect/vit-gpt2-image-captioning)
+
 [stabilityai/stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1)
+
 [runwayml/stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5)
+
 [stabilityai/sd-x2-latent-upscaler](https://huggingface.co/stabilityai/sd-x2-latent-upscaler)
+
 [damo-vilab/text-to-video-ms-1.7b](https://huggingface.co/damo-vilab/text-to-video-ms-1.7b)
+
 [cerspense/zeroscope_v2_576w](https://huggingface.co/cerspense/zeroscope_v2_576w)
+
 [strangeman3107/animov-512x](https://huggingface.co/strangeman3107/animov-512x)
+
 [SG161222/Realistic_Vision_V2.0](https://huggingface.co/SG161222/Realistic_Vision_V2.0)
+
 [prompthero/openjourney](https://huggingface.co/prompthero/openjourney)
+
 [Lykon/DreamShaper](https://huggingface.co/Lykon/DreamShaper)
+
 [Linaqruf/anything-v3.0](https://huggingface.co/Linaqruf/anything-v3.0)
+
 [dreamlike-art/dreamlike-photoreal-2.0](https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0)
+
 [hakurei/waifu-diffusion](https://huggingface.co/hakurei/waifu-diffusion)
+
 [plasmo/vox2](https://huggingface.co/plasmo/vox2)

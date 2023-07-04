@@ -36,7 +36,7 @@ export async function random(msg) {
     const command = imageModelCommands[Math.floor(Math.random()*imageModelCommands.length)]
     const completion = await openai.createCompletion({
         model: process.env.CHAT_MODEL,
-        prompt: "You will now act as an image prompt generator. I will describe an image to you, and you will create a prompt that could be used for image-generation. The image I want to generate is: " + topic,
+        prompt: "You will now act as an image prompt generator. I will describe an topic to you, and you will add details create a description that could be used for image-generation. The topic I want to generate an image for is: " + topic,
         max_tokens: Number(process.env.CHAT_PROMPT_MAX_TOKENS),
         temperature: Number(process.env.CHAT_TEMPERATURE)
     })

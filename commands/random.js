@@ -19,7 +19,7 @@ export async function getTopic(msg) {
 export async function random(msg) {
     let topic = await getTopic(msg) + ".";
     let numImages = await getNumImages(msg);
-    topic = topic.replace(/\s+/g, '')
+    console.log(topic);
     const imageModelCommands = [
         "!animov",
         "!anything",
@@ -43,6 +43,9 @@ export async function random(msg) {
     let prompt = completion.data.choices[0].text.replace(/(\r\n|\n|\r)/gm, "");
     if (prompt.includes("Prompt:")) {
         prompt = prompt.replace("Prompt:", "")
+    }
+    if (numImages === 1) {
+        numImages = ""
     }
     try {
         await msg.channel.send("^" + command + numImages + " " + prompt)

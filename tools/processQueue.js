@@ -18,7 +18,6 @@ export async function processQueue() {
         let confirmationMessage;
         let answer;
         let isReply;
-        let uberduckVoice;
         try {
             enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId);
         } catch (error) {

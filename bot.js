@@ -4,6 +4,7 @@ import {Configuration, OpenAIApi} from 'openai';
 import {ask} from "./commands/ask.js";
 import {chat} from "./commands/chat.js";
 import {prompt} from "./commands/chat.js";
+import {random} from "./commands/random.js";
 import {draw} from "./commands/draw.js";
 import {img2img} from "./commands/img2img.js";
 import {upscale} from "./commands/upscale.js";
@@ -56,8 +57,8 @@ export const openai = new OpenAIApi(configuration);
 
 
 client.on(Events.MessageCreate, async msg => {
-    if (msg.content.includes('!^chat')) await chat(msg); //bot can see his own messages for auto chat
-    if (msg.author.id === client.user.id) return;
+    let msgContent = msg.content;
+    if (msg.author.id === client.user.id && msg.content.substring(0,1) !== ('^')) return;
     if (CONTAIN_BOT && msg.channel.id !== DISCORD_CHANNEL_ID) return;
     let isReply, refMsg, isCommand, isMention;
     try {
@@ -70,89 +71,93 @@ client.on(Events.MessageCreate, async msg => {
     } catch (error) {
         isReply = false;
     }
-
+    if (msgContent.substring(0,1) === '^') {
+        msgContent = msgContent.replace('^', '');
+    }
     if (isReply && !isCommand && !isMention && refMsg.author.id === client.user.id) {
         await chat(msg)
     }
 
-    if (msg.content.substring(0, 5) === ("!test")) {
+    if (msgContent.substring(0, 5) === ("!test")) {
         await msg.reply("Hello world!")
     }
 
-    if (msg.content.substring(0, 4) === ("!ask") && ASK) {
+    if (msgContent.substring(0, 4) === ("!ask") && ASK) {
         await ask(msg);
     }
 
-    if (msg.content.substring(0, 5) === ("!chat") && CHAT) {
+    if (msgContent.substring(0, 5) === ("!chat") && CHAT) {
         await chat(msg);
     }
 
-    if (msg.content.substring(0, 5) === ("!draw") && STABLE_DIFFUSION) {
+    if (msgContent.substring(0, 5) === ("!draw") && STABLE_DIFFUSION) {
         await draw(msg);
     }
 
-    if ((msg.content.substring(0, 10) === ("!realistic") || msg.content.substring(0, 3) === ("!rv")) && REALISTIC_VISION) {
+    if ((msgContent.substring(0, 10) === ("!realistic") || msgContent.substring(0, 3) === ("!rv")) && REALISTIC_VISION) {
         await realisticVision(msg);
     }
 
-    if ((msg.content.substring(0, 12) === ("!openjourney") || msg.content.substring(0, 3) === ("!oj")) && OPENJOURNEY) {
+    if ((msgContent.substring(0, 12) === ("!openjourney") || msgContent.substring(0, 3) === ("!oj")) && OPENJOURNEY) {
         await openjourney(msg);
     }
 
-    if ((msg.content.substring(0, 12) === ("!dreamshaper") || msg.content.substring(0, 3) === ("!ds")) && DREAM_SHAPER) {
+    if ((msgContent.substring(0, 12) === ("!dreamshaper") || msgContent.substring(0, 3) === ("!ds")) && DREAM_SHAPER) {
         await dreamShaper(msg);
     }
 
-    if (msg.content.substring(0, 9) === ("!anything") && ANYTHING_V3) {
+    if (msgContent.substring(0, 9) === ("!anything") && ANYTHING_V3) {
         await anything(msg);
     }
 
-    if ((msg.content.substring(0, 10) === ("!photoreal") || msg.content.substring(0, 3) === ("!pr")) && DREAMLIKE_PHOTOREAL) {
+    if (msgContent.substring(0, 7) === ('!prompt')) {
+        await prompt(msg);
+    } else if ((msgContent.substring(0, 10) === ("!photoreal") || msgContent.substring(0, 3) === ("!pr")) && DREAMLIKE_PHOTOREAL) {
         await dreamlikePhotoreal(msg);
     }
 
-    if ((msg.content.substring(0, 6) === ("!waifu") || msg.content.substring(0, 3) === ("!wd")) && WAIFU_DIFFUSION) {
+    if ((msgContent.substring(0, 6) === ("!waifu") || msgContent.substring(0, 3) === ("!wd")) && WAIFU_DIFFUSION) {
         await waifuDiffusion(msg);
     }
 
-    if (msg.content.substring(0, 4) === ("!vox") && VOX2) {
+    if (msgContent.substring(0, 4) === ("!vox") && VOX2) {
         await vox2(msg);
     }
 
-    if (msg.content.substring(0, 6) === ('!video') && TEXT_TO_VIDEO) {
+    if (msgContent.substring(0, 6) === ('!video') && TEXT_TO_VIDEO) {
         await video(msg);
     }
 
-    if (msg.content.substring(0, 6) === ('!audio') && TEXT_TO_AUDIO) {
+    if (msgContent.substring(0, 6) === ('!audio') && TEXT_TO_AUDIO) {
         await audio(msg);
     }
 
-    if (msg.content.substring(0, 7) === ('!speech') && TEXT_TO_SPEECH) {
+    if (msgContent.substring(0, 7) === ('!speech') && TEXT_TO_SPEECH) {
         await speech(msg);
     }
 
-    if (msg.content.substring(0, 8) === ('!img2img') && IMAGE_TO_IMAGE) {
+    if (msgContent.substring(0, 8) === ('!img2img') && IMAGE_TO_IMAGE) {
         await img2img(msg);
     }
 
-    if (msg.content.substring(0, 7) === ('!animov') && ANIMOV) {
+    if (msgContent.substring(0, 7) === ('!animov') && ANIMOV) {
         await animov(msg);
     }
 
-    if (msg.content.substring(0, 6) === ('!xlvid') && XL_VIDEO) {
+    if (msgContent.substring(0, 6) === ('!xlvid') && XL_VIDEO) {
         await xlvid(msg);
     }
 
-    if (msg.content.substring(0, 8) === ('!upscale') && UPSCALE) {
+    if (msgContent.substring(0, 8) === ('!upscale') && UPSCALE) {
         await upscale(msg);
     }
 
-    if (msg.content.substring(0, 8) === ('!caption') && CAPTION) {
+    if (msgContent.substring(0, 8) === ('!caption') && CAPTION) {
         await caption(msg);
     }
 
-    if (msg.content.substring(0, 7) === ('!prompt')) {
-        await prompt(msg);
+    if (msgContent.substring(0, 7) === ('!random')) {
+        await random(msg);
     }
  });
 await client.login(process.env.DISCORD_TOKEN)

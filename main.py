@@ -314,6 +314,7 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             response = requests.get(img_url)
             input_image = Image.open(BytesIO(response.content)).convert("RGB")
             image_array = upscale_pipe(
+                prompt=prompt,
                 image=input_image,
                 generator=generator,
             ).images

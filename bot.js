@@ -4,7 +4,7 @@ import {Configuration, OpenAIApi} from 'openai';
 import {ask} from "./commands/ask.js";
 import {chat} from "./commands/chat.js";
 import {prompt} from "./commands/chat.js";
-import {random} from "./commands/random.js";
+import {random, randomGen} from "./commands/random.js";
 import {draw} from "./commands/draw.js";
 import {img2img} from "./commands/img2img.js";
 import {upscale} from "./commands/upscale.js";
@@ -26,27 +26,29 @@ export const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayInt
 
 export const queue = [];
 
-let CONTAIN_BOT = process.env.CONTAIN_BOT === 'true';
-let CHAT = process.env.CHAT === 'true';
-let ASK = process.env.ASK === 'true';
-let STABLE_DIFFUSION = process.env.STABLE_DIFFUSION === 'true';
-let TEXT_TO_VIDEO = process.env.TEXT_TO_VIDEO === 'true';
-let TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
-let TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
-let CAPTION = process.env.CAPTION === 'true';
-let IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
-let ANIMOV = process.env.ANIMOV_512X === 'true';
-let XL_VIDEO = process.env.XL_VIDEO === 'true';
-let UPSCALE = process.env.UPSCALE === 'true';
-let REALISTIC_VISION = process.env.REALISTIC_VISION === 'true';
-let OPENJOURNEY = process.env.OPENJOURNEY === 'true';
-let DREAM_SHAPER = process.env.DREAM_SHAPER === 'true';
-let ANYTHING_V3 = process.env.ANYTHING_V3 === 'true';
-let DREAMLIKE_PHOTOREAL = process.env.DREAMLIKE_PHOTOREAL === 'true';
-let WAIFU_DIFFUSION = process.env.WAIFU_DIFFUSION === 'true';
-let VOX2 = process.env.VOX2 === 'true';
+const CONTAIN_BOT = process.env.CONTAIN_BOT === 'true';
+const CHAT = process.env.CHAT === 'true';
+const ASK = process.env.ASK === 'true';
+const STABLE_DIFFUSION = process.env.STABLE_DIFFUSION === 'true';
+const TEXT_TO_VIDEO = process.env.TEXT_TO_VIDEO === 'true';
+const TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
+const TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
+const CAPTION = process.env.CAPTION === 'true';
+const IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
+const ANIMOV = process.env.ANIMOV_512X === 'true';
+const XL_VIDEO = process.env.XL_VIDEO === 'true';
+const UPSCALE = process.env.UPSCALE === 'true';
+const REALISTIC_VISION = process.env.REALISTIC_VISION === 'true';
+const OPENJOURNEY = process.env.OPENJOURNEY === 'true';
+const DREAM_SHAPER = process.env.DREAM_SHAPER === 'true';
+const ANYTHING_V3 = process.env.ANYTHING_V3 === 'true';
+const DREAMLIKE_PHOTOREAL = process.env.DREAMLIKE_PHOTOREAL === 'true';
+const WAIFU_DIFFUSION = process.env.WAIFU_DIFFUSION === 'true';
+const VOX2 = process.env.VOX2 === 'true';
 
-let DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const RANDOM_GEN = process.env.RANDOM_GEN === 'true';
+const RANDOM_GEN_INTERVAL_MILLISECONDS = process.env.RANDOM_GEN_INTERVAL_MILLISECONDS
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
 client.once(Events.ClientReady, c => {
     console.log(`Logged in as ${client.user.tag}.`);
@@ -55,6 +57,9 @@ client.once(Events.ClientReady, c => {
 const configuration = new Configuration ({apiKey: process.env.OPENAI_TOKEN,});
 export const openai = new OpenAIApi(configuration);
 
+if (RANDOM_GEN) {
+    setInterval(randomGen, RANDOM_GEN_INTERVAL_MILLISECONDS) //generate random image every x milliseconds
+}
 
 client.on(Events.MessageCreate, async msg => {
     let msgContent = msg.content;
@@ -62,7 +67,7 @@ client.on(Events.MessageCreate, async msg => {
     if (CONTAIN_BOT && msg.channel.id !== DISCORD_CHANNEL_ID) return;
     let isReply, refMsg, isCommand, isMention;
     try {
-        isCommand = Array.from(msg.content)[0] === '!';
+        isCommand = Array.from(msg.content)[0] === '!' || Array.from(msg.content)[0];
         // people like to tag their friends in the bot's gpt replies sometimes
         // if a mention is the first part of a reply to the bot, the bot will not process it for gpt response
         isMention = Array.from(msg.content)[0] === '<';

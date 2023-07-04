@@ -197,7 +197,6 @@ processing_lock = threading.Lock()
 
 
 def process(prompt: str, pipeline: str, num: int, img_url: str):
-    global output_ready
     start_time = time.time()
     print("Processing query...")
     seed = random.randint(0, 100000)

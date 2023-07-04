@@ -160,6 +160,10 @@ And the following work just like !drawX but use different models:
 
 ![img_4.png](tools/demo/img_4.png)
 
+#### !random
+
+Picks a random model and generates a prompt for it.
+
 ## To run:
 
 -Clone the repo and copy the following into a new file called '.env' saved in the root directory of the project.
@@ -176,6 +180,8 @@ And the following work just like !drawX but use different models:
     CONTAIN_BOT=true
     DELETE_AFTER_SENDING=true
     MAX_NUM_IMAGES=6
+    RANDOM_GEN=true
+    RANDOM_GEN_INTERVAL_MILLISECONDS=3600000
     
     CHAT=true
     ASK=true

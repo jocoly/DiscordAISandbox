@@ -38,11 +38,6 @@ export async function processQueue() {
         } catch (error) {
             isReply = false;
         }
-        if (queue[0].pipeline.includes("!")) {
-            uberduckVoice = queue[0].pipeline.replace("!", "");
-            uberduckVoice = voices[uberduckVoice];
-            queue[0].pipeline = uberduckVoice;
-        }
         if (await commandRequiresFile(msg) && isReply) {
             prompt = await getPrompt(refMsg);
             numImages = 1;

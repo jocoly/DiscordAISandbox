@@ -79,9 +79,6 @@ if (os.getenv("TEXT_TO_SPEECH")) == 'true':
     embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
     speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
 
-if (os.getenv("UBERDUCK_TTS")) == 'true':
-    uberduck_auth = (os.getenv("UBERDUCK_API_KEY"), os.getenv("UBERDUCK_API_SECRET"))
-
 if (os.getenv("CAPTION")) == 'true':
     print("Loading image-captioning model")
     caption_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
@@ -101,8 +98,8 @@ if (os.getenv("IMAGE_TO_IMAGE")) == 'true':
 if (os.getenv("ANIMOV_512X")) == 'true':
     print("Loading animov-512x model")
     animov_pipe = DiffusionPipeline.from_pretrained('strangeman3107/animov-512x',
-                                                           torch_dtype=torch.float16,
-                                                           variant='fp16')
+                                                    torch_dtype=torch.float16,
+                                                    variant='fp16')
     animov_pipe.scheduler = DPMSolverMultistepScheduler.from_config(animov_pipe.scheduler.config)
     animov_pipe = animov_pipe.to(device)
     animov_pipe.enable_model_cpu_offload()
@@ -429,39 +426,6 @@ def process(prompt: str, pipeline: str, num: int, img_url: str):
             for index in range(num):
                 image_path = save_image(images_array[index], output_dir)
                 process_output.append(image_path)
-        case _:
-            voice_model_uuid = pipeline
-            audio_uuid = requests.post(
-                "https://api.uberduck.ai/speak",
-                json=dict(speech=prompt, voicemodel_uuid=voice_model_uuid),
-                auth=uberduck_auth,
-            ).json()["uuid"]
-            output = requests.get(
-                "https://api.uberduck.ai/speak-status",
-                params=dict(uuid=audio_uuid),
-                auth=uberduck_auth,
-            ).json()
-            for t in range(10):
-                time.sleep(1)  # check status every second for 10 seconds.
-                output = requests.get(
-                    "https://api.uberduck.ai/speak-status",
-                    params=dict(uuid=audio_uuid),
-                    auth=uberduck_auth,
-                ).json()
-                if "path" in output:
-                    time.sleep(3)
-                    output_ready = True
-                    break
-
-            if output_ready:
-                print(output["path"])
-                r = requests.get(output["path"], allow_redirects=True)
-                file_name = os.path.join(output_dir, str(random.randint(1111, 9999)) + ".wav")
-                with open(file_name, 'wb') as file:
-                    file.write(r.content)
-                process_output.append(file_name)
-            else:
-                print("Audio file generation failed")
 
     gen_time = time.time() - start_time
     print(f"Created generation in {gen_time} seconds")

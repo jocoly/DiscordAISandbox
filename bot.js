@@ -3,6 +3,7 @@ import {Client, Events, GatewayIntentBits} from 'discord.js';
 import {Configuration, OpenAIApi} from 'openai';
 import {ask} from "./commands/ask.js";
 import {chat} from "./commands/chat.js";
+import {prompt} from "./commands/chat.js";
 import {draw} from "./commands/draw.js";
 import {img2img} from "./commands/img2img.js";
 import {upscale} from "./commands/upscale.js";
@@ -11,7 +12,6 @@ import {animov} from "./commands/animov.js";
 import {xlvid} from "./commands/xlvid.js";
 import {audio} from "./commands/audio.js";
 import {speech} from "./commands/speech.js";
-import {uberduckTTS} from "./commands/uberduckTTS.js";
 import {caption} from "./commands/caption.js";
 import {realisticVision} from "./commands/realisticVision.js";
 import {openjourney} from "./commands/openjourney.js";
@@ -32,7 +32,6 @@ let STABLE_DIFFUSION = process.env.STABLE_DIFFUSION === 'true';
 let TEXT_TO_VIDEO = process.env.TEXT_TO_VIDEO === 'true';
 let TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
 let TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
-let UBERDUCK_TTS = process.env.UBERDUCK_TTS === 'true';
 let CAPTION = process.env.CAPTION === 'true';
 let IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
 let ANIMOV = process.env.ANIMOV_512X === 'true';
@@ -152,13 +151,8 @@ client.on(Events.MessageCreate, async msg => {
         await caption(msg);
     }
 
-    if (msg.content.substring(0, 1) === '!') {
-        try {
-            await uberduckTTS(msg);
-        } catch (error) {
-            console.log("TTS call error: " + error)
-            await msg.reply("Try again later.")
-        }
+    if (msg.content.substring(0, 7) === ('!prompt')) {
+        await prompt(msg);
     }
  });
 await client.login(process.env.DISCORD_TOKEN)

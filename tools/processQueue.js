@@ -4,6 +4,7 @@ import {getPrompt} from "./getPrompt.js";
 import fs from "fs";
 import {queue} from "../bot.js";
 import {commandRequiresFile} from "./commandRequiresFile.js";
+import {voices} from "./voices.js";
 
 export async function processQueue() {
     while (queue.length > 0) {
@@ -17,6 +18,7 @@ export async function processQueue() {
         let confirmationMessage;
         let answer;
         let isReply;
+        let uberduckVoice;
         try {
             enqueueMessage = await msg.channel.messages.fetch(queue[0].enqueueMessageId);
         } catch (error) {
@@ -30,12 +32,16 @@ export async function processQueue() {
         if (queue[0].pipeline !== "Ask") {
             confirmationMessage = await msg.reply('Processing your request...');
         }
-
         try {
             refMsg = await msg.fetchReference();
             isReply = true;
         } catch (error) {
             isReply = false;
+        }
+        if (queue[0].pipeline.includes("!")) {
+            uberduckVoice = queue[0].pipeline.replace("!", "");
+            uberduckVoice = voices[uberduckVoice];
+            queue[0].pipeline = uberduckVoice;
         }
         if (await commandRequiresFile(msg) && isReply) {
             prompt = await getPrompt(refMsg);

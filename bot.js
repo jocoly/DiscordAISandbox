@@ -11,6 +11,7 @@ import {animov} from "./commands/animov.js";
 import {xlvid} from "./commands/xlvid.js";
 import {audio} from "./commands/audio.js";
 import {speech} from "./commands/speech.js";
+import {uberduckTTS} from "./commands/uberduckTTS.js";
 import {caption} from "./commands/caption.js";
 import {realisticVision} from "./commands/realisticVision.js";
 import {openjourney} from "./commands/openjourney.js";
@@ -31,6 +32,7 @@ let STABLE_DIFFUSION = process.env.STABLE_DIFFUSION === 'true';
 let TEXT_TO_VIDEO = process.env.TEXT_TO_VIDEO === 'true';
 let TEXT_TO_AUDIO = process.env.TEXT_TO_AUDIO === 'true';
 let TEXT_TO_SPEECH = process.env.TEXT_TO_SPEECH === 'true';
+let UBERDUCK_TTS = process.env.UBERDUCK_TTS === 'true';
 let CAPTION = process.env.CAPTION === 'true';
 let IMAGE_TO_IMAGE = process.env.IMAGE_TO_IMAGE === 'true';
 let ANIMOV = process.env.ANIMOV_512X === 'true';
@@ -61,6 +63,8 @@ client.on(Events.MessageCreate, async msg => {
     let isReply, refMsg, isCommand, isMention;
     try {
         isCommand = Array.from(msg.content)[0] === '!';
+        // people like to tag their friends in the bot's gpt replies sometimes
+        // if a mention is the first part of a reply to the bot, the bot will not process it for gpt response
         isMention = Array.from(msg.content)[0] === '<';
         refMsg = await msg.fetchReference()
         isReply = true;
@@ -72,80 +76,89 @@ client.on(Events.MessageCreate, async msg => {
         await chat(msg)
     }
 
-    if (msg.content.includes("!test")) {
+    if (msg.content.substring(0, 5) === ("!test")) {
         await msg.reply("Hello world!")
     }
 
-    if (msg.content.includes("!ask") && ASK) {
+    if (msg.content.substring(0, 4) === ("!ask") && ASK) {
         await ask(msg);
     }
 
-    if (msg.content.includes("!chat") && CHAT) {
+    if (msg.content.substring(0, 5) === ("!chat") && CHAT) {
         await chat(msg);
     }
 
-    if (msg.content.includes("!draw") && STABLE_DIFFUSION) {
+    if (msg.content.substring(0, 5) === ("!draw") && STABLE_DIFFUSION) {
         await draw(msg);
     }
 
-    if ((msg.content.includes("!realistic") || msg.content.includes("!rv")) && REALISTIC_VISION) {
+    if ((msg.content.substring(0, 10) === ("!realistic") || msg.content.substring(0, 3) === ("!rv")) && REALISTIC_VISION) {
         await realisticVision(msg);
     }
 
-    if ((msg.content.includes("!openjourney") || msg.content.includes("!oj")) && OPENJOURNEY) {
+    if ((msg.content.substring(0, 12) === ("!openjourney") || msg.content.substring(0, 3) === ("!oj")) && OPENJOURNEY) {
         await openjourney(msg);
     }
 
-    if ((msg.content.includes("!dreamshaper") || msg.content.includes("!ds")) && DREAM_SHAPER) {
+    if ((msg.content.substring(0, 12) === ("!dreamshaper") || msg.content.substring(0, 3) === ("!ds")) && DREAM_SHAPER) {
         await dreamShaper(msg);
     }
 
-    if (msg.content.includes("!anything") && ANYTHING_V3) {
+    if (msg.content.substring(0, 9) === ("!anything") && ANYTHING_V3) {
         await anything(msg);
     }
 
-    if ((msg.content.includes("!photoreal") || msg.content.includes("!pr")) && DREAMLIKE_PHOTOREAL) {
+    if ((msg.content.substring(0, 10) === ("!photoreal") || msg.content.substring(0, 3) === ("!pr")) && DREAMLIKE_PHOTOREAL) {
         await dreamlikePhotoreal(msg);
     }
 
-    if ((msg.content.includes("!waifu") || msg.content.includes("!wd")) && WAIFU_DIFFUSION) {
+    if ((msg.content.substring(0, 6) === ("!waifu") || msg.content.substring(0, 3) === ("!wd")) && WAIFU_DIFFUSION) {
         await waifuDiffusion(msg);
     }
 
-    if (msg.content.includes("!vox") && VOX2) {
+    if (msg.content.substring(0, 4) === ("!vox") && VOX2) {
         await vox2(msg);
     }
 
-    if (msg.content.includes('!video') && TEXT_TO_VIDEO) {
+    if (msg.content.substring(0, 6) === ('!video') && TEXT_TO_VIDEO) {
         await video(msg);
     }
 
-    if (msg.content.includes('!audio') && TEXT_TO_AUDIO) {
+    if (msg.content.substring(0, 6) === ('!audio') && TEXT_TO_AUDIO) {
         await audio(msg);
     }
 
-    if (msg.content.includes('!speech') && TEXT_TO_SPEECH) {
+    if (msg.content.substring(0, 7) === ('!speech') && TEXT_TO_SPEECH) {
         await speech(msg);
     }
 
-    if (msg.content.includes('!img2img') && IMAGE_TO_IMAGE) {
+    if (msg.content.substring(0, 8) === ('!img2img') && IMAGE_TO_IMAGE) {
         await img2img(msg);
     }
 
-    if (msg.content.includes('!animov') && ANIMOV) {
+    if (msg.content.substring(0, 7) === ('!animov') && ANIMOV) {
         await animov(msg);
     }
 
-    if (msg.content.includes('!xlvid') && XL_VIDEO) {
+    if (msg.content.substring(0, 6) === ('!xlvid') && XL_VIDEO) {
         await xlvid(msg);
     }
 
-    if (msg.content.includes('!upscale') && UPSCALE) {
+    if (msg.content.substring(0, 8) === ('!upscale') && UPSCALE) {
         await upscale(msg);
     }
 
-    if (msg.content.includes('!caption') && CAPTION) {
+    if (msg.content.substring(0, 8) === ('!caption') && CAPTION) {
         await caption(msg);
+    }
+
+    if (msg.content.substring(0, 1) === '!') {
+        try {
+            await uberduckTTS(msg);
+        } catch (error) {
+            console.log("TTS call error: " + error)
+            await msg.reply("Try again later.")
+        }
     }
  });
 await client.login(process.env.DISCORD_TOKEN)

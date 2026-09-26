@@ -1,3 +1,5 @@
+> **Archived.** This bot has been superseded by [jocoly/AIStuff](https://github.com/jocoly/AIStuff).
+
 # Discord AI Sandbox
 
 ## A Discord interface for 17 of Huggingface's most popular AI media models
